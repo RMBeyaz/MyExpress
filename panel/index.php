@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) || !empty($config['panel_pass']));
 $requests = [];
+$statuses = mx_statuses();
 
 if (mx_panel_is_logged_in()) {
     try {
@@ -111,7 +112,7 @@ if (mx_panel_is_logged_in()) {
                 <?php foreach ($requests as $request): ?>
                   <tr>
                     <td><a href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
-                    <td><span class="panel-status"><?= mx_h($request['status']) ?></span></td>
+                    <td><span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span></td>
                     <td><?= mx_h($request['pickup']) ?><br><small><?= mx_h($request['dropoff']) ?></small></td>
                     <td><?= mx_h($request['sender_name']) ?><br><small><?= mx_h($request['sender_phone']) ?></small></td>
                     <td><?= mx_h($request['price']) ?></td>

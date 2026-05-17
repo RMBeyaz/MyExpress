@@ -137,6 +137,24 @@ function mx_panel_require_login()
     }
 }
 
+function mx_statuses(): array
+{
+    return [
+        'new' => 'Yeni',
+        'called' => 'Arandı',
+        'assigned' => 'Kurye Atandı',
+        'picked_up' => 'Teslim Alındı',
+        'delivered' => 'Teslim Edildi',
+        'cancelled' => 'İptal',
+    ];
+}
+
+function mx_status_label(string $status): string
+{
+    $statuses = mx_statuses();
+    return $statuses[$status] ?? $status;
+}
+
 function mx_h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');

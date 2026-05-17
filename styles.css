@@ -951,6 +951,12 @@ h3 {
   margin-bottom: 18px;
 }
 
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .panel-header h1 {
   margin-bottom: 0;
   font-size: clamp(30px, 4vw, 46px);
@@ -1048,6 +1054,32 @@ h3 {
   font-weight: 800;
 }
 
+.panel-status-new {
+  color: #0b2236;
+  background: #eef1f3;
+}
+
+.panel-status-called,
+.panel-status-assigned {
+  color: #8a4b00;
+  background: #fff1d6;
+}
+
+.panel-status-picked_up {
+  color: #0d5c7c;
+  background: #dff4ff;
+}
+
+.panel-status-delivered {
+  color: #0d6946;
+  background: #dff8ec;
+}
+
+.panel-status-cancelled {
+  color: #9c241c;
+  background: #ffe1de;
+}
+
 .panel-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1068,6 +1100,15 @@ h3 {
 
 .panel-detail-list dd {
   margin: 0;
+}
+
+.panel-detail-list-compact {
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
+.panel-detail-list a {
+  color: var(--red);
+  font-weight: 800;
 }
 
 .panel-log {

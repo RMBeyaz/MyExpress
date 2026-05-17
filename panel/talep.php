@@ -42,14 +42,7 @@ $logs = $pdo->prepare('SELECT status, note, created_at FROM request_status_logs 
 $logs->execute([':id' => $id]);
 $statusLogs = $logs->fetchAll();
 
-$statuses = [
-    'new' => 'Yeni',
-    'called' => 'Arandı',
-    'assigned' => 'Kurye Atandı',
-    'picked_up' => 'Teslim Alındı',
-    'delivered' => 'Teslim Edildi',
-    'cancelled' => 'İptal',
-];
+$statuses = mx_statuses();
 ?>
 <!doctype html>
 <html lang="tr">
@@ -66,18 +59,22 @@ $statuses = [
           <p class="eyebrow">Talep detayı</p>
           <h1><?= mx_h($request['tracking_code']) ?></h1>
         </div>
-        <a class="btn btn-secondary" href="index.php">Listeye Dön</a>
+        <div class="panel-header-actions">
+          <span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span>
+          <a class="btn btn-secondary" href="index.php">Listeye Dön</a>
+        </div>
       </section>
 
       <section class="panel-detail-grid">
         <article class="panel-card">
           <h2>Gönderi</h2>
           <dl class="panel-detail-list">
-            <dt>Durum</dt><dd><?= mx_h($statuses[$request['status']] ?? $request['status']) ?></dd>
+            <dt>Durum</dt><dd><?= mx_h(mx_status_label($request['status'])) ?></dd>
             <dt>Ücret</dt><dd><?= mx_h($request['price']) ?></dd>
             <dt>Hizmet</dt><dd><?= mx_h($request['service_label']) ?></dd>
             <dt>Paket</dt><dd><?= mx_h($request['package_label']) ?></dd>
             <dt>Teslim zamanı</dt><dd><?= mx_h($request['delivery_time']) ?></dd>
+            <dt>Oluşturma</dt><dd><?= mx_h($request['created_at']) ?></dd>
             <dt>Not</dt><dd><?= mx_h($request['note']) ?></dd>
           </dl>
         </article>
@@ -92,12 +89,22 @@ $statuses = [
 
         <article class="panel-card">
           <h2>Gönderici</h2>
-          <p><?= mx_h($request['sender_name']) ?><br><?= mx_h($request['sender_phone']) ?><br><?= mx_h($request['sender_email']) ?><br>TCKN: <?= mx_h($request['sender_tckn']) ?></p>
+          <dl class="panel-detail-list panel-detail-list-compact">
+            <dt>Ad soyad</dt><dd><?= mx_h($request['sender_name']) ?></dd>
+            <dt>Telefon</dt><dd><a href="tel:<?= mx_h($request['sender_phone']) ?>"><?= mx_h($request['sender_phone']) ?></a></dd>
+            <dt>E-posta</dt><dd><?= mx_h($request['sender_email']) ?></dd>
+            <dt>TCKN</dt><dd><?= mx_h($request['sender_tckn']) ?></dd>
+          </dl>
         </article>
 
         <article class="panel-card">
           <h2>Alıcı</h2>
-          <p><?= mx_h($request['recipient_name']) ?><br><?= mx_h($request['recipient_phone']) ?><br><?= mx_h($request['recipient_email']) ?><br>TCKN: <?= mx_h($request['recipient_tckn']) ?></p>
+          <dl class="panel-detail-list panel-detail-list-compact">
+            <dt>Ad soyad</dt><dd><?= mx_h($request['recipient_name']) ?></dd>
+            <dt>Telefon</dt><dd><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><?= mx_h($request['recipient_phone']) ?></a></dd>
+            <dt>E-posta</dt><dd><?= mx_h($request['recipient_email']) ?></dd>
+            <dt>TCKN</dt><dd><?= mx_h($request['recipient_tckn']) ?></dd>
+          </dl>
         </article>
       </section>
 
