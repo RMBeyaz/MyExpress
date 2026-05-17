@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MyExpress | Hızlı Kurye ve Aynı Gün Teslimat</title>
+    <meta
+      name="description"
+      content="MyExpress ile şehir içi motorlu kurye, express kurye, arabalı kurye, e-ticaret teslimatı ve kurumsal dağıtım çözümleri."
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="assets/MyExpress.com.tr%20Logo.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <a class="brand" href="index.html" aria-label="MyExpress ana sayfa">
+        <img src="assets/MyExpress.com.tr%20Logo.svg" alt="MyExpress" width="220" height="82">
+      </a>
+      <nav class="main-nav" aria-label="Ana menü">
+        <div class="nav-dropdown">
+          <a class="nav-trigger" href="hizmetler.html">Hizmetler</a>
+          <div class="dropdown-menu" aria-label="Hizmetler menüsü">
+            <a href="hizmetler/normal-kurye.html">Normal Kurye</a>
+            <a href="hizmetler/ekspres-kurye.html">Ekspres Kurye</a>
+            <a href="hizmetler/gidis-donus-kurye.html">Gidiş Dönüş Kurye</a>
+            <a href="hizmetler/vip-kurye.html">VIP Kurye</a>
+            <a href="hizmetler/gece-kurye.html">Gece Kurye</a>
+            <a href="hizmetler/aracli-kurye.html">Araçlı Kurye</a>
+            <a href="hizmetler/e-ticaret-teslimati.html">E-Ticaret Teslimatı</a>
+            <a href="hizmetler/kurye-api-entegrasyonu.html">Kurye API Entegrasyonu</a>
+            <a href="hizmetler/hava-kargo.html">Hava Kargo</a>
+            <a href="hizmetler/medikal-moto-kurye.html">Medikal Moto Kurye</a>
+            <a href="hizmetler/kurye-arac-kiralama.html">Kurye Araç Kiralama</a>
+            <a href="hizmetler/bireysel-kurye.html">Bireysel Kurye</a>
+            <a href="hizmetler/abone-kurye.html">Abone Kurye</a>
+            <a href="hizmetler/paketleme.html">Paketleme</a>
+            <a href="hizmetler/gonderi-yonetim-merkezi.html">Gönderi Yönetim Merkezi</a>
+          </div>
+        </div>
+        <a href="cozumler.html">Çözümler</a>
+        <a href="nasil-calisir.html">Nasıl Çalışır</a>
+        <a href="iletisim.html">İletişim</a>
+      </nav>
+      <div class="header-actions">
+        <a class="ghost-link" href="tel:+902120000000">0212 000 00 00</a>
+        <a class="btn btn-small btn-primary" href="index.html#kurye-cagir">Kurye Çağır</a>
+      </div>
+      <button class="menu-toggle" type="button" aria-label="Menüyü aç" aria-expanded="false" data-menu-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </header>
+
+    <main>
+      <section class="hero" id="kurye-cagir">
+        <div class="hero-content">
+          <p class="eyebrow">Şehir içi hızlı teslimat</p>
+          <h1>Gönderiniz MyExpress ile hızlı ve güvenli teslim.</h1>
+          <p class="hero-copy">
+            Motorlu kurye, express teslimat, arabalı kurye ve kurumsal dağıtım
+            ihtiyaçlarınız için tek noktadan pratik çözüm.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#talep-formu">Kurye Çağır</a>
+            <a class="btn btn-secondary" href="#kurumsal">Kurumsal Teklif Al</a>
+          </div>
+
+          <dl class="trust-strip" aria-label="MyExpress öne çıkan bilgiler">
+            <div>
+              <dt>Aynı gün</dt>
+              <dd>Teslimat</dd>
+            </div>
+            <div>
+              <dt>Canlı</dt>
+              <dd>Durum takibi</dd>
+            </div>
+            <div>
+              <dt>7/24</dt>
+              <dd>Destek hattı</dd>
+            </div>
+          </dl>
+        </div>
+
+        <aside class="quote-panel" id="talep-formu" aria-label="Kurye çağır formu">
+          <div class="panel-heading">
+            <span class="status-dot"></span>
+            <p>Hızlı talep oluştur</p>
+          </div>
+          <form class="delivery-form">
+            <label>
+              Alım mahallesi
+              <div class="autocomplete-field">
+                <input type="text" name="pickup" placeholder="Örn. Etiler Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
+                <div class="autocomplete-list" data-autocomplete-list></div>
+              </div>
+            </label>
+            <label>
+              Teslim mahallesi
+              <div class="autocomplete-field">
+                <input type="text" name="dropoff" placeholder="Örn. Koşuyolu Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
+                <div class="autocomplete-list" data-autocomplete-list></div>
+              </div>
+            </label>
+            <div class="price-estimate" data-price-estimate>
+              <span>Tahmini fiyat</span>
+              <strong>Adres seçince hesaplanır</strong>
+            </div>
+            <button class="btn btn-primary btn-full" type="submit">Talep Oluştur</button>
+          </form>
+          <p class="form-note">Ön fiyat mahalle seçimine göre hesaplanır. Sokak, cadde, paket ve hizmet tipi sonraki adımda tamamlanır.</p>
+        </aside>
+      </section>
+
+      <section class="service-band" id="hizmetler">
+        <div class="section-heading">
+          <p class="eyebrow">Hizmetlerimiz</p>
+          <h2>İhtiyaca göre teslimat seçenekleri</h2>
+        </div>
+
+        <div class="service-grid">
+          <a class="service-card" href="hizmetler/normal-kurye.html">
+            <span class="service-icon">M</span>
+            <h3>Motorlu Kurye</h3>
+            <p>Şehir içi evrak ve küçük paket gönderileri için dengeli, güvenilir teslimat.</p>
+            <strong>150-210 dk</strong>
+          </a>
+          <a class="service-card featured" href="hizmetler/ekspres-kurye.html">
+            <span class="service-icon">E</span>
+            <h3>Express Kurye</h3>
+            <p>Acil gönderilerde en yakın kurye yönlendirilir, teslimat süreci hızlandırılır.</p>
+            <strong>75-120 dk</strong>
+          </a>
+          <a class="service-card" href="hizmetler/vip-kurye.html">
+            <span class="service-icon">V</span>
+            <h3>VIP Kurye</h3>
+            <p>Tek gönderiye odaklanan, öncelikli ve hızlı teslimat ihtiyacı olan işler için.</p>
+            <strong>45-75 dk</strong>
+          </a>
+          <a class="service-card" href="hizmetler/aracli-kurye.html">
+            <span class="service-icon">A</span>
+            <h3>Arabalı Kurye</h3>
+            <p>Motosikletle taşınamayacak paket, numune, koli ve ekipmanlar için araçlı çözüm.</p>
+            <strong>Planlı teslimat</strong>
+          </a>
+        </div>
+        <p class="service-note">Süreler İstanbul içi ortalama teslimat aralıklarıdır; mesafe, trafik ve gönderi hazırlığına göre değişebilir.</p>
+      </section>
+
+      <section class="solutions" id="cozumler">
+        <div class="section-heading">
+          <p class="eyebrow">Sektörel çözümler</p>
+          <h2>Her iş kolu için düzenli teslimat akışı</h2>
+        </div>
+
+        <div class="solution-grid">
+          <article>
+            <h3>E-Ticaret</h3>
+            <p>Siparişlerinizi aynı gün müşteriye ulaştıran operasyon desteği.</p>
+          </article>
+          <article>
+            <h3>Restoran ve Market</h3>
+            <p>Hız ve zamanlama hassasiyeti yüksek gönderiler için esnek kurye ağı.</p>
+          </article>
+          <article>
+            <h3>Medikal Ürünler</h3>
+            <p>Özenli taşıma gerektiren paketlerde kontrollü teslimat süreci.</p>
+          </article>
+          <article>
+            <h3>Evrak ve Belge</h3>
+            <p>İmzalı, takip edilebilir ve güvenli evrak teslimat akışları.</p>
+          </article>
+          <article>
+            <h3>Çiçek ve Hediye</h3>
+            <p>Zamanında teslim edilmesi gereken özel gün gönderileri.</p>
+          </article>
+          <article>
+            <h3>Toplu Dağıtım</h3>
+            <p>Fatura, davetiye, numune ve kampanya dağıtımları için planlı ekip.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="workflow" id="nasil-calisir">
+        <div class="section-heading">
+          <p class="eyebrow">Nasıl çalışır?</p>
+          <h2>Üç adımda gönderiniz yola çıkar</h2>
+        </div>
+
+        <ol class="steps">
+          <li>
+            <span>1</span>
+            <h3>Adresleri girin</h3>
+            <p>Alım ve teslimat noktalarını paylaşarak uygun hizmet tipini seçin.</p>
+          </li>
+          <li>
+            <span>2</span>
+            <h3>Kurye yönlensin</h3>
+            <p>Operasyon ekibi gönderiniz için en uygun kuryeyi planlar.</p>
+          </li>
+          <li>
+            <span>3</span>
+            <h3>Teslimatı takip edin</h3>
+            <p>Gönderi durumu ve teslim bilgisi sizinle paylaşılır.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="corporate-cta" id="kurumsal">
+        <div>
+          <p class="eyebrow">Kurumsal operasyon</p>
+          <h2>Düzenli gönderileriniz için MyExpress teklif hazırlasın.</h2>
+          <p>
+            E-ticaret, mağaza, ofis ve saha ekipleri için günlük veya dönemsel
+            teslimat ihtiyaçlarınızı birlikte planlayalım.
+          </p>
+        </div>
+        <a class="btn btn-primary" href="mailto:info@myexpress.com.tr">Teklif Al</a>
+      </section>
+    </main>
+
+    <footer class="site-footer" id="iletisim">
+      <div>
+        <a class="brand footer-brand" href="#" aria-label="MyExpress ana sayfa">
+          <img src="assets/MyExpress.com.tr%20Logo.svg" alt="MyExpress" width="220" height="82">
+        </a>
+        <p>Şehir içi hızlı kurye ve kurumsal teslimat çözümleri.</p>
+      </div>
+      <address>
+        <strong>İletişim</strong>
+        <a href="tel:+902120000000">0212 000 00 00</a>
+        <a href="mailto:info@myexpress.com.tr">info@myexpress.com.tr</a>
+        <span>İstanbul, Türkiye</span>
+      </address>
+      <div class="footer-links">
+        <strong>Hızlı bağlantılar</strong>
+        <a href="hizmetler.html">Hizmetler</a>
+        <a href="#kurye-cagir">Kurye Çağır</a>
+        <a href="#kurumsal">Kurumsal Teklif</a>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

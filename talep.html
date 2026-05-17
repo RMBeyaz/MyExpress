@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kurye Talebi | MyExpress</title>
+    <meta name="description" content="MyExpress kurye talebi. Alım adresi, teslim adresi, paket tipi, kişi bilgileri ve gönderi ücreti bilgileri.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="assets/MyExpress.com.tr%20Logo.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <a class="brand" href="index.html" aria-label="MyExpress ana sayfa">
+        <img src="assets/MyExpress.com.tr%20Logo.svg" alt="MyExpress" width="220" height="82">
+      </a>
+      <nav class="main-nav" aria-label="Ana menü">
+        <div class="nav-dropdown">
+          <a class="nav-trigger" href="hizmetler.html">Hizmetler</a>
+          <div class="dropdown-menu" aria-label="Hizmetler menüsü">
+            <a href="hizmetler/normal-kurye.html">Normal Kurye</a>
+            <a href="hizmetler/ekspres-kurye.html">Ekspres Kurye</a>
+            <a href="hizmetler/gidis-donus-kurye.html">Gidiş Dönüş Kurye</a>
+            <a href="hizmetler/vip-kurye.html">VIP Kurye</a>
+            <a href="hizmetler/gece-kurye.html">Gece Kurye</a>
+            <a href="hizmetler/aracli-kurye.html">Araçlı Kurye</a>
+            <a href="hizmetler/e-ticaret-teslimati.html">E-Ticaret Teslimatı</a>
+            <a href="hizmetler/kurye-api-entegrasyonu.html">Kurye API Entegrasyonu</a>
+            <a href="hizmetler/hava-kargo.html">Hava Kargo</a>
+            <a href="hizmetler/medikal-moto-kurye.html">Medikal Moto Kurye</a>
+            <a href="hizmetler/kurye-arac-kiralama.html">Kurye Araç Kiralama</a>
+            <a href="hizmetler/bireysel-kurye.html">Bireysel Kurye</a>
+            <a href="hizmetler/abone-kurye.html">Abone Kurye</a>
+            <a href="hizmetler/paketleme.html">Paketleme</a>
+            <a href="hizmetler/gonderi-yonetim-merkezi.html">Gönderi Yönetim Merkezi</a>
+          </div>
+        </div>
+        <a href="cozumler.html">Çözümler</a>
+        <a href="nasil-calisir.html">Nasıl Çalışır</a>
+        <a href="iletisim.html">İletişim</a>
+      </nav>
+      <div class="header-actions">
+        <a class="ghost-link" href="tel:+902120000000">0212 000 00 00</a>
+        <a class="btn btn-small btn-primary" href="index.html#kurye-cagir">Yeni Talep</a>
+      </div>
+      <button class="menu-toggle" type="button" aria-label="Menüyü aç" aria-expanded="false" data-menu-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </header>
+
+    <main>
+      <section class="form-page-heading">
+        <div>
+          <p class="eyebrow">Talep detayları</p>
+          <h1>Gönderi detaylarını tamamlayın</h1>
+        </div>
+        <p>Mahalle, açık adres, kişi bilgileri ve onaylar tamamlandığında kurye talebi işleme alınabilir.</p>
+      </section>
+
+      <section class="detail-layout detail-layout-compact">
+        <article class="detail-content">
+          <h2>Adres ve gönderi bilgileri</h2>
+          <form class="delivery-form detail-form" data-detail-form>
+            <div class="form-section compact-section">
+              <h3>Adres bilgileri</h3>
+              <div class="form-grid">
+                <label>
+                  Alım bölgesi / mahallesi
+                  <div class="autocomplete-field">
+                    <input type="text" name="pickup" placeholder="Örn. Etiler Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
+                    <div class="autocomplete-list" data-autocomplete-list></div>
+                  </div>
+                  <small class="field-help">Listeden mahalle veya semt seçin.</small>
+                </label>
+                <label>
+                  Teslim bölgesi / mahallesi
+                  <div class="autocomplete-field">
+                    <input type="text" name="dropoff" placeholder="Örn. Koşuyolu Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
+                    <div class="autocomplete-list" data-autocomplete-list></div>
+                  </div>
+                  <small class="field-help">Listeden teslim mahallesi veya semti seçin.</small>
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Alım açık adresi ve adres tarifi
+                  <textarea name="pickupStreet" placeholder="Cadde/sokak, bina no, kat, firma adı, güvenlik veya kurye için tarif" required></textarea>
+                </label>
+                <label>
+                  Teslim açık adresi ve adres tarifi
+                  <textarea name="dropoffStreet" placeholder="Cadde/sokak, bina no, kat, alıcı adı, güvenlik veya kurye için tarif" required></textarea>
+                </label>
+              </div>
+              <small class="field-help">Açık adres ve tarif zorunludur; kurye geldiğinde bekleme yaşanmaması için bina/kat/güvenlik notu ekleyin.</small>
+            </div>
+
+            <div class="form-section compact-section">
+              <h3>Hizmet ve paket</h3>
+              <div class="option-grid">
+                <div class="choice-group">
+                  <span>Hizmet tipi</span>
+                  <div class="choice-options compact-options" data-choice-group>
+                    <label><input type="radio" name="service" value="normal" checked><span>Motorlu</span></label>
+                    <label><input type="radio" name="service" value="express"><span>Express</span></label>
+                    <label><input type="radio" name="service" value="vip"><span>VIP</span></label>
+                    <label><input type="radio" name="service" value="aracli"><span>Arabalı</span></label>
+                    <label><input type="radio" name="service" value="eticaret"><span>E-Ticaret</span></label>
+                  </div>
+                </div>
+                <div class="choice-group">
+                  <span>Paket tipi</span>
+                  <div class="choice-options compact-options" data-choice-group>
+                    <label><input type="radio" name="packageType" value="evrak" checked><span>Evrak</span></label>
+                    <label><input type="radio" name="packageType" value="kucuk"><span>Küçük</span></label>
+                    <label><input type="radio" name="packageType" value="orta"><span>Orta</span></label>
+                    <label><input type="radio" name="packageType" value="buyuk"><span>Büyük</span></label>
+                    <label><input type="radio" name="packageType" value="motorDisi"><span>Motor çantasına sığmayan</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Teslim zamanı
+                  <select name="deliveryTime">
+                    <option>En kısa sürede</option>
+                    <option>Bugün içinde</option>
+                    <option>Belirli saat aralığı</option>
+                    <option>Gece teslimat</option>
+                  </select>
+                </label>
+                <label>
+                  Not
+                  <input name="note" placeholder="Kırılabilir, bekleme, arama veya teslim talimatı">
+                </label>
+              </div>
+            </div>
+
+            <div class="fee-summary" data-request-summary data-detail-price-estimate>
+              <div class="fee-summary-main">
+                <span>Gönderi ücreti</span>
+                <strong data-summary-price>Mahalleleri seçince hesaplanır</strong>
+                <p>Mahalle, hizmet tipi ve paket tipine göre anlık hesaplanır.</p>
+              </div>
+              <div class="fee-summary-route">
+                <span>Alım</span>
+                <strong data-summary-pickup>Belirtilmedi</strong>
+              </div>
+              <div class="fee-summary-route">
+                <span>Teslim</span>
+                <strong data-summary-dropoff>Belirtilmedi</strong>
+              </div>
+              <a class="btn btn-secondary" href="index.html#kurye-cagir">Mahalleleri Değiştir</a>
+            </div>
+
+            <div class="form-section compact-section">
+              <h3>Gönderici bilgileri</h3>
+              <div class="form-grid identity-grid">
+                <label>
+                  Ad soyad
+                  <input type="text" name="senderName" placeholder="Gönderici adı soyadı" required>
+                </label>
+                <label>
+                  Telefon
+                  <input type="tel" name="senderPhone" placeholder="05xx xxx xx xx" required inputmode="tel">
+                </label>
+                <label>
+                  E-posta
+                  <input type="email" name="senderEmail" placeholder="ornek@domain.com">
+                </label>
+                <label>
+                  T.C. kimlik no
+                  <input type="text" name="senderTckn" placeholder="11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" required data-tckn>
+                </label>
+              </div>
+            </div>
+            <div class="form-section compact-section">
+              <h3>Alıcı bilgileri</h3>
+              <div class="form-grid identity-grid">
+                <label>
+                  Ad soyad
+                  <input type="text" name="recipientName" placeholder="Alıcı adı soyadı" required>
+                </label>
+                <label>
+                  Telefon
+                  <input type="tel" name="recipientPhone" placeholder="05xx xxx xx xx" required inputmode="tel">
+                </label>
+                <label>
+                  E-posta
+                  <input type="email" name="recipientEmail" placeholder="İsteğe bağlı">
+                </label>
+                <label>
+                  T.C. kimlik no
+                  <input type="text" name="recipientTckn" placeholder="11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" required data-tckn>
+                </label>
+              </div>
+            </div>
+            <div class="consent-box">
+              <label>
+                <input type="checkbox" name="serviceAgreement" required>
+                <span><a href="kurye-hizmet-sozlesmesi.html" target="_blank">Kurye Hizmet Sözleşmesi</a>'ni okudum ve onaylıyorum.</span>
+              </label>
+              <label>
+                <input type="checkbox" name="kvkkConsent" required>
+                <span><a href="kvkk-politikasi.html" target="_blank">Müşteri Aydınlatma ve KVKK Politikası</a>'nı okudum ve onaylıyorum.</span>
+              </label>
+            </div>
+            <button class="btn btn-primary btn-full" type="submit">Talebi Tamamla</button>
+          </form>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer" id="iletisim">
+      <div><a class="brand footer-brand" href="index.html"><img src="assets/MyExpress.com.tr%20Logo.svg" alt="MyExpress" width="220" height="82"></a><p>Şehir içi hızlı kurye ve kurumsal teslimat çözümleri.</p></div>
+      <address><strong>İletişim</strong><a href="tel:+902120000000">0212 000 00 00</a><a href="mailto:info@myexpress.com.tr">info@myexpress.com.tr</a><span>İstanbul, Türkiye</span></address>
+      <div class="footer-links"><strong>Hızlı bağlantılar</strong><a href="hizmetler.html">Hizmetler</a><a href="cozumler.html">Çözümler</a><a href="iletisim.html">İletişim</a></div>
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>
