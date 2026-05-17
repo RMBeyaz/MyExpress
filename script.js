@@ -570,16 +570,19 @@ detailForm?.addEventListener('submit', (event) => {
     .then(async (response) => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) {
-        throw new Error(data.message || 'Talep gönderilemedi.');
+        const error = new Error(data.message || 'Talep gönderilemedi.');
+        error.code = data.code || `HTTP_${response.status}`;
+        throw error;
       }
       window.location.href = data.redirect || 'talep-basarili.html';
     })
     .catch((error) => {
       button.disabled = false;
-      button.textContent = error.message || defaultButtonText;
+      const code = error.code ? ` (${error.code})` : '';
+      button.textContent = `${error.message || defaultButtonText}${code}`;
       window.setTimeout(() => {
         button.textContent = defaultButtonText;
-      }, 2200);
+      }, 3600);
     });
 });
 
