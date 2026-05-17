@@ -35,6 +35,12 @@ $checks = [
         'courier_requests' => false,
         'request_status_logs' => false,
     ],
+    'write_test' => [
+        'requested' => isset($_GET['write']) && $_GET['write'] === '1',
+        'ok' => null,
+        'error_code' => null,
+        'error_hint' => null,
+    ],
 ];
 
 try {
@@ -59,6 +65,84 @@ try {
         );
         $stmt->execute([':table' => $table]);
         $checks['tables'][$table] = (int) $stmt->fetchColumn() === 1;
+    }
+
+    if ($checks['write_test']['requested']) {
+        try {
+            $pdo->beginTransaction();
+            $trackingCode = 'MXTEST' . date('His') . strtoupper(bin2hex(random_bytes(2)));
+            $stmt = $pdo->prepare(
+                'INSERT INTO courier_requests (
+                    tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
+                    dropoff, dropoff_lat, dropoff_lng, dropoff_street,
+                    service, service_label, package_type, package_label, delivery_time, note, price,
+                    sender_name, sender_phone, sender_email, sender_tckn,
+                    recipient_name, recipient_phone, recipient_email, recipient_tckn,
+                    service_agreement_accepted, kvkk_accepted, ip_address, user_agent
+                ) VALUES (
+                    :tracking_code, :status, :pickup, :pickup_lat, :pickup_lng, :pickup_street,
+                    :dropoff, :dropoff_lat, :dropoff_lng, :dropoff_street,
+                    :service, :service_label, :package_type, :package_label, :delivery_time, :note, :price,
+                    :sender_name, :sender_phone, :sender_email, :sender_tckn,
+                    :recipient_name, :recipient_phone, :recipient_email, :recipient_tckn,
+                    :service_agreement_accepted, :kvkk_accepted, :ip_address, :user_agent
+                )'
+            );
+            $stmt->execute([
+                ':tracking_code' => $trackingCode,
+                ':status' => 'new',
+                ':pickup' => 'Test Alim',
+                ':pickup_lat' => 41.0000000,
+                ':pickup_lng' => 29.0000000,
+                ':pickup_street' => 'Test alim adresi',
+                ':dropoff' => 'Test Teslim',
+                ':dropoff_lat' => 41.0100000,
+                ':dropoff_lng' => 29.0100000,
+                ':dropoff_street' => 'Test teslim adresi',
+                ':service' => 'normal',
+                ':service_label' => 'Motorlu',
+                ':package_type' => 'evrak',
+                ':package_label' => 'Evrak',
+                ':delivery_time' => 'En kisa surede',
+                ':note' => 'Health-check rollback test',
+                ':price' => '250 TL',
+                ':sender_name' => 'Test Gonderici',
+                ':sender_phone' => '05000000000',
+                ':sender_email' => 'test@example.com',
+                ':sender_tckn' => '31966836068',
+                ':recipient_name' => 'Test Alici',
+                ':recipient_phone' => '05000000001',
+                ':recipient_email' => 'test@example.com',
+                ':recipient_tckn' => '31966836068',
+                ':service_agreement_accepted' => 1,
+                ':kvkk_accepted' => 1,
+                ':ip_address' => '127.0.0.1',
+                ':user_agent' => 'health-check',
+            ]);
+
+            $requestId = (int) $pdo->lastInsertId();
+            $logStmt = $pdo->prepare('INSERT INTO request_status_logs (request_id, status, note) VALUES (:id, :status, :note)');
+            $logStmt->execute([
+                ':id' => $requestId,
+                ':status' => 'new',
+                ':note' => 'Health-check rollback test',
+            ]);
+            $pdo->rollBack();
+            $checks['write_test']['ok'] = true;
+        } catch (Throwable $writeError) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            $checks['ok'] = false;
+            $checks['write_test']['ok'] = false;
+            $checks['write_test']['error_hint'] = 'Test kaydi yazilamadi. Server error_log detay verir.';
+            if ($writeError instanceof PDOException) {
+                $errorInfo = $writeError->errorInfo ?? [];
+                $checks['write_test']['error_code'] = isset($errorInfo[1]) ? (string) $errorInfo[1] : (string) $writeError->getCode();
+            }
+            mx_log_error('health-check write test failed', $writeError);
+        }
     }
 } catch (Throwable $error) {
     $checks['ok'] = false;

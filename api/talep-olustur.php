@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    $stage = 'payload';
     $payload = mx_post_json();
 
     $required = [
@@ -43,10 +44,12 @@ try {
         mx_json(['ok' => false, 'message' => 'Gecerli T.C. kimlik numarasi girin.'], 422);
     }
 
+    $stage = 'db-connect';
     $trackingCode = mx_tracking_code();
     $pdo = mx_pdo();
     $pdo->beginTransaction();
 
+    $stage = 'insert-request';
     $stmt = $pdo->prepare(
         'INSERT INTO courier_requests (
             tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
@@ -98,6 +101,7 @@ try {
     ]);
 
     $requestId = (int) $pdo->lastInsertId();
+    $stage = 'insert-status-log';
     $logStmt = $pdo->prepare(
         'INSERT INTO request_status_logs (request_id, status, note) VALUES (:request_id, :status, :note)'
     );
@@ -109,6 +113,7 @@ try {
 
     $pdo->commit();
 
+    $stage = 'mail';
     $config = mx_config();
     $mailTo = $config['mail_to'] ?? 'info@myexpress.com.tr';
     $subject = 'Yeni MyExpress kurye talebi: ' . $trackingCode;
@@ -134,12 +139,32 @@ try {
         $pdo->rollBack();
     }
 
-    mx_log_error('talep olustur failed', $error, [
+    $errorCode = 'REQUEST_FAILED';
+    if (isset($stage)) {
+        $errorCode = strtoupper(str_replace('-', '_', $stage)) . '_FAILED';
+    }
+
+    $extra = [
+        'stage' => $stage ?? 'unknown',
         'payload_keys' => isset($payload) && is_array($payload) ? array_keys($payload) : [],
         'pickup' => $payload['pickup'] ?? null,
         'dropoff' => $payload['dropoff'] ?? null,
         'service' => $payload['service'] ?? null,
         'packageType' => $payload['packageType'] ?? null,
-    ]);
-    mx_json(['ok' => false, 'message' => 'Talep olusturulurken teknik bir sorun olustu. Lutfen tekrar deneyin.'], 500);
+    ];
+
+    if ($error instanceof PDOException) {
+        $extra['pdo_code'] = (string) $error->getCode();
+        $extra['pdo_error_info'] = $error->errorInfo ?? [];
+        if (isset($error->errorInfo[1])) {
+            $errorCode .= '_' . (string) $error->errorInfo[1];
+        }
+    }
+
+    mx_log_error('talep olustur failed', $error, $extra);
+    mx_json([
+        'ok' => false,
+        'message' => 'Talep olusturulurken teknik bir sorun olustu. Lutfen tekrar deneyin.',
+        'code' => $errorCode,
+    ], 500);
 }
