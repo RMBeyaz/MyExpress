@@ -1,0 +1,18 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/myexpresscom/public_html/
+    - /bin/cp -R assets $DEPLOYPATH
+    - /bin/cp -R hizmetler $DEPLOYPATH
+    - /bin/cp index.html $DEPLOYPATH
+    - /bin/cp cozumler.html $DEPLOYPATH
+    - /bin/cp hizmetler.html $DEPLOYPATH
+    - /bin/cp iletisim.html $DEPLOYPATH
+    - /bin/cp kurye-hizmet-sozlesmesi.html $DEPLOYPATH
+    - /bin/cp kvkk-politikasi.html $DEPLOYPATH
+    - /bin/cp nasil-calisir.html $DEPLOYPATH
+    - /bin/cp talep.html $DEPLOYPATH
+    - /bin/cp robots.txt $DEPLOYPATH
+    - /bin/cp sitemap.xml $DEPLOYPATH
+    - /bin/cp script.js $DEPLOYPATH
+    - /bin/cp styles.css $DEPLOYPATH
