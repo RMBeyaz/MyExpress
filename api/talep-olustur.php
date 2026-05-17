@@ -134,6 +134,12 @@ try {
         $pdo->rollBack();
     }
 
-    error_log('MyExpress talep hatasi: ' . $error->getMessage());
-    mx_json(['ok' => false, 'message' => 'Talep alinirken bir sorun olustu. Lutfen tekrar deneyin.'], 500);
+    mx_log_error('talep olustur failed', $error, [
+        'payload_keys' => isset($payload) && is_array($payload) ? array_keys($payload) : [],
+        'pickup' => $payload['pickup'] ?? null,
+        'dropoff' => $payload['dropoff'] ?? null,
+        'service' => $payload['service'] ?? null,
+        'packageType' => $payload['packageType'] ?? null,
+    ]);
+    mx_json(['ok' => false, 'message' => 'Talep olusturulurken teknik bir sorun olustu. Lutfen tekrar deneyin.'], 500);
 }

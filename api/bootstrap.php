@@ -3,6 +3,29 @@ declare(strict_types=1);
 
 const MYEXPRESS_CONFIG_PATH = '/home/myexpresscom/myexpress-config.php';
 
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
+function mx_log_error(string $context, Throwable $error, array $extra = [])
+{
+    $safeExtra = $extra;
+    foreach (['db_pass', 'password', 'panel_pass', 'panel_pass_hash', 'senderTckn', 'recipientTckn', 'sender_tckn', 'recipient_tckn'] as $key) {
+        if (isset($safeExtra[$key])) {
+            $safeExtra[$key] = '[redacted]';
+        }
+    }
+
+    error_log(sprintf(
+        '[MyExpress] %s | %s in %s:%d | extra=%s | trace=%s',
+        $context,
+        $error->getMessage(),
+        $error->getFile(),
+        $error->getLine(),
+        json_encode($safeExtra, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        $error->getTraceAsString()
+    ));
+}
+
 function mx_config(): array
 {
     static $config = null;
@@ -48,7 +71,7 @@ function mx_pdo(): PDO
     return $pdo;
 }
 
-function mx_json(array $payload, int $status = 200): void
+function mx_json(array $payload, int $status = 200)
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
@@ -106,7 +129,7 @@ function mx_panel_is_logged_in(): bool
     return isset($_SESSION['mx_panel_auth']) && $_SESSION['mx_panel_auth'] === true;
 }
 
-function mx_panel_require_login(): void
+function mx_panel_require_login()
 {
     if (!mx_panel_is_logged_in()) {
         header('Location: index.php');

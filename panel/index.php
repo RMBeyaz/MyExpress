@@ -6,11 +6,13 @@ require __DIR__ . '/../api/bootstrap.php';
 
 $error = '';
 $config = [];
+$panelError = '';
 
 try {
     $config = mx_config();
 } catch (Throwable $exception) {
     $error = 'Config dosyasi okunamadi.';
+    mx_log_error('panel config failed', $exception);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -37,13 +39,18 @@ $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) 
 $requests = [];
 
 if (mx_panel_is_logged_in()) {
-    $stmt = mx_pdo()->query(
-        'SELECT id, tracking_code, status, pickup, dropoff, price, sender_name, sender_phone, created_at
-         FROM courier_requests
-         ORDER BY created_at DESC
-         LIMIT 80'
-    );
-    $requests = $stmt->fetchAll();
+    try {
+        $stmt = mx_pdo()->query(
+            'SELECT id, tracking_code, status, pickup, dropoff, price, sender_name, sender_phone, created_at
+             FROM courier_requests
+             ORDER BY created_at DESC
+             LIMIT 80'
+        );
+        $requests = $stmt->fetchAll();
+    } catch (Throwable $exception) {
+        $panelError = 'Talepler su an listelenemiyor. Detay icin server error_log kontrol edilmeli.';
+        mx_log_error('panel request list failed', $exception);
+    }
 }
 ?>
 <!doctype html>
@@ -85,6 +92,9 @@ if (mx_panel_is_logged_in()) {
             <h2>Son Talepler</h2>
             <span><?= count($requests) ?> kayıt</span>
           </div>
+          <?php if ($panelError !== ''): ?>
+            <p class="panel-alert"><?= mx_h($panelError) ?></p>
+          <?php endif; ?>
           <div class="panel-table-wrap">
             <table class="panel-table">
               <thead>
