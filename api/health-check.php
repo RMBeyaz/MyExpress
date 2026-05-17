@@ -34,6 +34,10 @@ $checks = [
     'tables' => [
         'courier_requests' => false,
         'request_status_logs' => false,
+        'request_audit_logs' => false,
+    ],
+    'columns' => [
+        'courier_requests.distance_km' => false,
     ],
     'write_test' => [
         'requested' => isset($_GET['write']) && $_GET['write'] === '1',
@@ -66,6 +70,7 @@ try {
         $stmt->execute([':table' => $table]);
         $checks['tables'][$table] = (int) $stmt->fetchColumn() === 1;
     }
+    $checks['columns']['courier_requests.distance_km'] = mx_column_exists('courier_requests', 'distance_km');
 
     if ($checks['write_test']['requested']) {
         try {
@@ -188,6 +193,10 @@ foreach ($checks['extensions'] as $enabled) {
 }
 
 if (!$checks['database']['connected'] || in_array(false, $checks['tables'], true)) {
+    $checks['ok'] = false;
+}
+
+if (in_array(false, $checks['columns'], true)) {
     $checks['ok'] = false;
 }
 

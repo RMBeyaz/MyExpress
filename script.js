@@ -211,6 +211,11 @@ const calculateEstimate = (pickup, dropoff, serviceValue = 'normal', packageValu
   return formatPrice(estimate);
 };
 
+const calculateBillableDistance = (pickup, dropoff) => {
+  const rawDistance = calculateDistance(pickup, dropoff);
+  return Math.max(rawDistance * 1.28, pickup.display === dropoff.display ? 4 : 7);
+};
+
 const updateDetailEstimate = () => {
   if (!detailForm || !detailPriceEstimate) return;
 
@@ -553,6 +558,7 @@ detailForm?.addEventListener('submit', (event) => {
   payload.dropoffLat = dropoff.dataset.selectedLat;
   payload.dropoffLng = dropoff.dataset.selectedLng;
   payload.price = detailPriceEstimate?.querySelector('[data-summary-price]')?.textContent || 'Hesaplanamadı';
+  payload.distanceKm = calculateBillableDistance(selectedLocationForInput(pickup), selectedLocationForInput(dropoff)).toFixed(2);
   payload.serviceLabel = selectedService?.nextElementSibling?.textContent?.trim() || payload.service;
   payload.packageLabel = selectedPackage?.nextElementSibling?.textContent?.trim() || payload.packageType;
   payload.serviceAgreement = detailForm.elements.serviceAgreement.checked;

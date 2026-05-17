@@ -54,14 +54,14 @@ try {
         'INSERT INTO courier_requests (
             tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
             dropoff, dropoff_lat, dropoff_lng, dropoff_street,
-            service, service_label, package_type, package_label, delivery_time, note, price,
+            service, service_label, package_type, package_label, delivery_time, note, price, distance_km,
             sender_name, sender_phone, sender_email, sender_tckn,
             recipient_name, recipient_phone, recipient_email, recipient_tckn,
             service_agreement_accepted, kvkk_accepted, ip_address, user_agent
         ) VALUES (
             :tracking_code, :status, :pickup, :pickup_lat, :pickup_lng, :pickup_street,
             :dropoff, :dropoff_lat, :dropoff_lng, :dropoff_street,
-            :service, :service_label, :package_type, :package_label, :delivery_time, :note, :price,
+            :service, :service_label, :package_type, :package_label, :delivery_time, :note, :price, :distance_km,
             :sender_name, :sender_phone, :sender_email, :sender_tckn,
             :recipient_name, :recipient_phone, :recipient_email, :recipient_tckn,
             :service_agreement_accepted, :kvkk_accepted, :ip_address, :user_agent
@@ -86,6 +86,7 @@ try {
         ':delivery_time' => mx_clean_string($payload['deliveryTime'] ?? '', 80),
         ':note' => mx_clean_text($payload['note'] ?? '', 1000),
         ':price' => mx_clean_string($payload['price'], 40),
+        ':distance_km' => is_numeric($payload['distanceKm'] ?? null) ? (float) $payload['distanceKm'] : null,
         ':sender_name' => mx_clean_string($payload['senderName'], 120),
         ':sender_phone' => mx_clean_string($payload['senderPhone'], 40),
         ':sender_email' => mx_clean_string($payload['senderEmail'] ?? '', 160),

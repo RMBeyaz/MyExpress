@@ -987,6 +987,9 @@ h3 {
 }
 
 .panel-login input,
+.panel-filters input,
+.panel-filters select,
+.panel-edit-form input,
 .panel-card select,
 .panel-card textarea {
   width: 100%;
@@ -998,6 +1001,27 @@ h3 {
 
 .panel-card textarea {
   min-height: 120px;
+}
+
+.panel-filters,
+.panel-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-filters label,
+.panel-edit-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.panel-filters .btn {
+  align-self: end;
 }
 
 .panel-alert {
@@ -1078,6 +1102,56 @@ h3 {
 .panel-status-cancelled {
   color: #9c241c;
   background: #ffe1de;
+}
+
+.wa-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  color: #fff !important;
+  background: #20b15a;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.status-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.status-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.status-choice span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 12px;
+  color: var(--navy);
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.status-choice.is-selected span,
+.status-choice input:checked + span {
+  color: #fff;
+  background: var(--navy);
+  border-color: var(--navy);
+  box-shadow: 0 0 0 4px rgba(239, 68, 56, 0.16), 0 10px 24px rgba(11, 34, 54, 0.18);
 }
 
 .panel-detail-grid {
@@ -1398,6 +1472,9 @@ h3 {
   .fee-summary,
   .identity-grid,
   .panel-detail-grid,
+  .panel-filters,
+  .panel-edit-grid,
+  .status-choice-grid,
   .process-grid,
   .form-grid,
   .steps,

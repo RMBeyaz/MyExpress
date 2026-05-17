@@ -6,6 +6,7 @@ deployment:
     - /bin/cp -R assets $DEPLOYPATH
     - /bin/cp -R api $DEPLOYPATH
     - /bin/cp -R hizmetler $DEPLOYPATH
+    - /bin/cp -R migrations $DEPLOYPATH
     - /bin/cp -R panel $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
     - /bin/cp cozumler.html $DEPLOYPATH

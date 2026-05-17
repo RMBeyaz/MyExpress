@@ -126,7 +126,21 @@ function mx_tracking_code(): string
 
 function mx_panel_is_logged_in(): bool
 {
-    return isset($_SESSION['mx_panel_auth']) && $_SESSION['mx_panel_auth'] === true;
+    if (!isset($_SESSION['mx_panel_auth']) || $_SESSION['mx_panel_auth'] !== true) {
+        return false;
+    }
+
+    $ttl = (int) (mx_config()['panel_session_ttl'] ?? 7200);
+    $lastActivity = (int) ($_SESSION['mx_panel_last_activity'] ?? 0);
+
+    if ($lastActivity > 0 && time() - $lastActivity > $ttl) {
+        $_SESSION = [];
+        session_destroy();
+        return false;
+    }
+
+    $_SESSION['mx_panel_last_activity'] = time();
+    return true;
 }
 
 function mx_panel_require_login()
@@ -153,6 +167,65 @@ function mx_status_label(string $status): string
 {
     $statuses = mx_statuses();
     return $statuses[$status] ?? $status;
+}
+
+function mx_panel_user(): string
+{
+    return (string) ($_SESSION['mx_panel_user'] ?? 'panel');
+}
+
+function mx_table_exists(string $table): bool
+{
+    $stmt = mx_pdo()->prepare(
+        'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table'
+    );
+    $stmt->execute([':table' => $table]);
+    return (int) $stmt->fetchColumn() === 1;
+}
+
+function mx_column_exists(string $table, string $column): bool
+{
+    $stmt = mx_pdo()->prepare(
+        'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column'
+    );
+    $stmt->execute([':table' => $table, ':column' => $column]);
+    return (int) $stmt->fetchColumn() === 1;
+}
+
+function mx_audit_log(?int $requestId, string $action, string $details = ''): void
+{
+    try {
+        if (!mx_table_exists('request_audit_logs')) {
+            return;
+        }
+
+        $stmt = mx_pdo()->prepare(
+            'INSERT INTO request_audit_logs (request_id, admin_user, action, details, ip_address, user_agent)
+             VALUES (:request_id, :admin_user, :action, :details, :ip_address, :user_agent)'
+        );
+        $stmt->execute([
+            ':request_id' => $requestId,
+            ':admin_user' => mx_panel_user(),
+            ':action' => $action,
+            ':details' => $details,
+            ':ip_address' => mx_clean_string($_SERVER['REMOTE_ADDR'] ?? '', 45),
+            ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
+        ]);
+    } catch (Throwable $error) {
+        mx_log_error('audit log failed', $error, ['request_id' => $requestId, 'action' => $action]);
+    }
+}
+
+function mx_whatsapp_url(string $phone, string $message = ''): string
+{
+    $digits = preg_replace('/\D+/', '', $phone);
+    if (strlen($digits) === 10 && str_starts_with($digits, '5')) {
+        $digits = '90' . $digits;
+    } elseif (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+        $digits = '9' . $digits;
+    }
+
+    return 'https://wa.me/' . $digits . ($message !== '' ? '?text=' . rawurlencode($message) : '');
 }
 
 function mx_h($value): string
