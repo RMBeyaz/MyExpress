@@ -113,21 +113,32 @@ try {
 
     $pdo->commit();
 
-    $stage = 'mail';
-    $config = mx_config();
-    $mailTo = $config['mail_to'] ?? 'info@myexpress.com.tr';
-    $subject = 'Yeni MyExpress kurye talebi: ' . $trackingCode;
-    $message = implode("\n", [
-        'Yeni kurye talebi olusturuldu.',
-        'Talep No: ' . $trackingCode,
-        'Gonderi ucreti: ' . mx_clean_string($payload['price'], 40),
-        'Alim: ' . mx_clean_string($payload['pickup'], 255),
-        'Teslim: ' . mx_clean_string($payload['dropoff'], 255),
-        'Gonderici: ' . mx_clean_string($payload['senderName'], 120) . ' - ' . mx_clean_string($payload['senderPhone'], 40),
-        'Alici: ' . mx_clean_string($payload['recipientName'], 120) . ' - ' . mx_clean_string($payload['recipientPhone'], 40),
-        'Panel: https://myexpress.com.tr/kurye/panel/',
-    ]);
-    @mail($mailTo, $subject, $message, 'From: MyExpress <info@myexpress.com.tr>');
+    try {
+        $config = mx_config();
+        $mailTo = $config['mail_to'] ?? 'info@myexpress.com.tr';
+        $subject = 'Yeni MyExpress kurye talebi: ' . $trackingCode;
+        $message = implode("\n", [
+            'Yeni kurye talebi olusturuldu.',
+            'Talep No: ' . $trackingCode,
+            'Gonderi ucreti: ' . mx_clean_string($payload['price'], 40),
+            'Alim: ' . mx_clean_string($payload['pickup'], 255),
+            'Teslim: ' . mx_clean_string($payload['dropoff'], 255),
+            'Gonderici: ' . mx_clean_string($payload['senderName'], 120) . ' - ' . mx_clean_string($payload['senderPhone'], 40),
+            'Alici: ' . mx_clean_string($payload['recipientName'], 120) . ' - ' . mx_clean_string($payload['recipientPhone'], 40),
+            'Panel: https://myexpress.com.tr/kurye/panel/',
+        ]);
+
+        if (function_exists('mail')) {
+            $sent = @mail($mailTo, $subject, $message, 'From: MyExpress <info@myexpress.com.tr>');
+            if (!$sent) {
+                error_log('[MyExpress] talep mail gonderilemedi | tracking_code=' . $trackingCode);
+            }
+        } else {
+            error_log('[MyExpress] PHP mail fonksiyonu kapali | tracking_code=' . $trackingCode);
+        }
+    } catch (Throwable $mailError) {
+        mx_log_error('talep mail failed', $mailError, ['tracking_code' => $trackingCode]);
+    }
 
     mx_json([
         'ok' => true,
