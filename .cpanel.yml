@@ -1,7 +1,8 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/myexpresscom/public_html/
+    - export DEPLOYPATH=/home/myexpresscom/public_html/kurye/
+    - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R assets $DEPLOYPATH
     - /bin/cp -R hizmetler $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
