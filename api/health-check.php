@@ -28,6 +28,8 @@ $checks = [
     'database' => [
         'connected' => false,
         'driver' => null,
+        'error_code' => null,
+        'error_hint' => null,
     ],
     'tables' => [
         'courier_requests' => false,
@@ -61,6 +63,31 @@ try {
 } catch (Throwable $error) {
     $checks['ok'] = false;
     $checks['error'] = 'Health-check tamamlanamadi. Detay icin server error_log kontrol edilmeli.';
+
+    if ($error instanceof PDOException) {
+        $errorInfo = $error->errorInfo ?? [];
+        $driverCode = isset($errorInfo[1]) ? (string) $errorInfo[1] : (string) $error->getCode();
+        $checks['database']['error_code'] = $driverCode;
+        switch ($driverCode) {
+            case '1044':
+                $checks['database']['error_hint'] = 'DB kullanicisinin veritabanina yetkisi yok. cPanel MySQL Databases > Add User To Database > ALL PRIVILEGES kontrol edilmeli.';
+                break;
+            case '1045':
+                $checks['database']['error_hint'] = 'DB kullanici adi veya sifresi hatali olabilir. Config db_user/db_pass ve cPanel kullanici sifresi kontrol edilmeli.';
+                break;
+            case '1049':
+                $checks['database']['error_hint'] = 'Veritabani adi bulunamadi. Config db_name cPanelde gorunen tam adla ayni olmali.';
+                break;
+            case '2002':
+            case '2003':
+                $checks['database']['error_hint'] = 'DB hosta ulasilamiyor. cPanel ortaminda db_host genelde localhost olmali.';
+                break;
+            default:
+                $checks['database']['error_hint'] = 'DB baglantisi kurulamadi. Server error_log detay verir.';
+                break;
+        }
+    }
+
     mx_log_error('health-check failed', $error);
 }
 
