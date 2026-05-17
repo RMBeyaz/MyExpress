@@ -4,7 +4,9 @@ deployment:
     - export DEPLOYPATH=/home/myexpresscom/public_html/kurye/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R assets $DEPLOYPATH
+    - /bin/cp -R api $DEPLOYPATH
     - /bin/cp -R hizmetler $DEPLOYPATH
+    - /bin/cp -R panel $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
     - /bin/cp cozumler.html $DEPLOYPATH
     - /bin/cp hizmetler.html $DEPLOYPATH
@@ -13,6 +15,7 @@ deployment:
     - /bin/cp kvkk-politikasi.html $DEPLOYPATH
     - /bin/cp nasil-calisir.html $DEPLOYPATH
     - /bin/cp talep.html $DEPLOYPATH
+    - /bin/cp talep-basarili.html $DEPLOYPATH
     - /bin/cp robots.txt $DEPLOYPATH
     - /bin/cp sitemap.xml $DEPLOYPATH
     - /bin/cp script.js $DEPLOYPATH

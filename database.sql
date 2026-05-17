@@ -1,0 +1,50 @@
+CREATE TABLE IF NOT EXISTS courier_requests (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tracking_code VARCHAR(32) NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'new',
+  pickup VARCHAR(255) NOT NULL,
+  pickup_lat DECIMAL(10, 7) NULL,
+  pickup_lng DECIMAL(10, 7) NULL,
+  pickup_street TEXT NOT NULL,
+  dropoff VARCHAR(255) NOT NULL,
+  dropoff_lat DECIMAL(10, 7) NULL,
+  dropoff_lng DECIMAL(10, 7) NULL,
+  dropoff_street TEXT NOT NULL,
+  service VARCHAR(40) NOT NULL,
+  service_label VARCHAR(80) NOT NULL,
+  package_type VARCHAR(40) NOT NULL,
+  package_label VARCHAR(80) NOT NULL,
+  delivery_time VARCHAR(80) NULL,
+  note TEXT NULL,
+  price VARCHAR(40) NOT NULL,
+  sender_name VARCHAR(120) NOT NULL,
+  sender_phone VARCHAR(40) NOT NULL,
+  sender_email VARCHAR(160) NULL,
+  sender_tckn VARCHAR(11) NOT NULL,
+  recipient_name VARCHAR(120) NOT NULL,
+  recipient_phone VARCHAR(40) NOT NULL,
+  recipient_email VARCHAR(160) NULL,
+  recipient_tckn VARCHAR(11) NOT NULL,
+  service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0,
+  kvkk_accepted TINYINT(1) NOT NULL DEFAULT 0,
+  ip_address VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_tracking_code (tracking_code),
+  KEY idx_status_created (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS request_status_logs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  request_id BIGINT UNSIGNED NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  note TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_request_id (request_id),
+  CONSTRAINT fk_status_logs_request
+    FOREIGN KEY (request_id) REFERENCES courier_requests(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

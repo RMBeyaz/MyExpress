@@ -1,0 +1,139 @@
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/bootstrap.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    mx_json(['ok' => false, 'message' => 'Bu endpoint sadece POST kabul eder.'], 405);
+}
+
+try {
+    $payload = mx_post_json();
+
+    $required = [
+        'pickup' => 'Alim mahallesi',
+        'dropoff' => 'Teslim mahallesi',
+        'pickupStreet' => 'Alim acik adresi',
+        'dropoffStreet' => 'Teslim acik adresi',
+        'senderName' => 'Gonderici ad soyad',
+        'senderPhone' => 'Gonderici telefon',
+        'senderTckn' => 'Gonderici T.C. kimlik no',
+        'recipientName' => 'Alici ad soyad',
+        'recipientPhone' => 'Alici telefon',
+        'recipientTckn' => 'Alici T.C. kimlik no',
+        'service' => 'Hizmet tipi',
+        'packageType' => 'Paket tipi',
+        'price' => 'Gonderi ucreti',
+    ];
+
+    foreach ($required as $key => $label) {
+        if (!isset($payload[$key]) || trim((string) $payload[$key]) === '') {
+            mx_json(['ok' => false, 'message' => $label . ' zorunludur.'], 422);
+        }
+    }
+
+    if (empty($payload['serviceAgreement']) || empty($payload['kvkkConsent'])) {
+        mx_json(['ok' => false, 'message' => 'Sozlesme ve KVKK onaylari zorunludur.'], 422);
+    }
+
+    $senderTckn = preg_replace('/\D/', '', (string) $payload['senderTckn']);
+    $recipientTckn = preg_replace('/\D/', '', (string) $payload['recipientTckn']);
+
+    if (!mx_valid_tckn($senderTckn) || !mx_valid_tckn($recipientTckn)) {
+        mx_json(['ok' => false, 'message' => 'Gecerli T.C. kimlik numarasi girin.'], 422);
+    }
+
+    $trackingCode = mx_tracking_code();
+    $pdo = mx_pdo();
+    $pdo->beginTransaction();
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO courier_requests (
+            tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
+            dropoff, dropoff_lat, dropoff_lng, dropoff_street,
+            service, service_label, package_type, package_label, delivery_time, note, price,
+            sender_name, sender_phone, sender_email, sender_tckn,
+            recipient_name, recipient_phone, recipient_email, recipient_tckn,
+            service_agreement_accepted, kvkk_accepted, ip_address, user_agent
+        ) VALUES (
+            :tracking_code, :status, :pickup, :pickup_lat, :pickup_lng, :pickup_street,
+            :dropoff, :dropoff_lat, :dropoff_lng, :dropoff_street,
+            :service, :service_label, :package_type, :package_label, :delivery_time, :note, :price,
+            :sender_name, :sender_phone, :sender_email, :sender_tckn,
+            :recipient_name, :recipient_phone, :recipient_email, :recipient_tckn,
+            :service_agreement_accepted, :kvkk_accepted, :ip_address, :user_agent
+        )'
+    );
+
+    $stmt->execute([
+        ':tracking_code' => $trackingCode,
+        ':status' => 'new',
+        ':pickup' => mx_clean_string($payload['pickup'], 255),
+        ':pickup_lat' => is_numeric($payload['pickupLat'] ?? null) ? (float) $payload['pickupLat'] : null,
+        ':pickup_lng' => is_numeric($payload['pickupLng'] ?? null) ? (float) $payload['pickupLng'] : null,
+        ':pickup_street' => mx_clean_text($payload['pickupStreet'], 1000),
+        ':dropoff' => mx_clean_string($payload['dropoff'], 255),
+        ':dropoff_lat' => is_numeric($payload['dropoffLat'] ?? null) ? (float) $payload['dropoffLat'] : null,
+        ':dropoff_lng' => is_numeric($payload['dropoffLng'] ?? null) ? (float) $payload['dropoffLng'] : null,
+        ':dropoff_street' => mx_clean_text($payload['dropoffStreet'], 1000),
+        ':service' => mx_clean_string($payload['service'], 40),
+        ':service_label' => mx_clean_string($payload['serviceLabel'] ?? $payload['service'], 80),
+        ':package_type' => mx_clean_string($payload['packageType'], 40),
+        ':package_label' => mx_clean_string($payload['packageLabel'] ?? $payload['packageType'], 80),
+        ':delivery_time' => mx_clean_string($payload['deliveryTime'] ?? '', 80),
+        ':note' => mx_clean_text($payload['note'] ?? '', 1000),
+        ':price' => mx_clean_string($payload['price'], 40),
+        ':sender_name' => mx_clean_string($payload['senderName'], 120),
+        ':sender_phone' => mx_clean_string($payload['senderPhone'], 40),
+        ':sender_email' => mx_clean_string($payload['senderEmail'] ?? '', 160),
+        ':sender_tckn' => $senderTckn,
+        ':recipient_name' => mx_clean_string($payload['recipientName'], 120),
+        ':recipient_phone' => mx_clean_string($payload['recipientPhone'], 40),
+        ':recipient_email' => mx_clean_string($payload['recipientEmail'] ?? '', 160),
+        ':recipient_tckn' => $recipientTckn,
+        ':service_agreement_accepted' => 1,
+        ':kvkk_accepted' => 1,
+        ':ip_address' => mx_clean_string($_SERVER['REMOTE_ADDR'] ?? '', 45),
+        ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
+    ]);
+
+    $requestId = (int) $pdo->lastInsertId();
+    $logStmt = $pdo->prepare(
+        'INSERT INTO request_status_logs (request_id, status, note) VALUES (:request_id, :status, :note)'
+    );
+    $logStmt->execute([
+        ':request_id' => $requestId,
+        ':status' => 'new',
+        ':note' => 'Talep web formundan olusturuldu.',
+    ]);
+
+    $pdo->commit();
+
+    $config = mx_config();
+    $mailTo = $config['mail_to'] ?? 'info@myexpress.com.tr';
+    $subject = 'Yeni MyExpress kurye talebi: ' . $trackingCode;
+    $message = implode("\n", [
+        'Yeni kurye talebi olusturuldu.',
+        'Talep No: ' . $trackingCode,
+        'Gonderi ucreti: ' . mx_clean_string($payload['price'], 40),
+        'Alim: ' . mx_clean_string($payload['pickup'], 255),
+        'Teslim: ' . mx_clean_string($payload['dropoff'], 255),
+        'Gonderici: ' . mx_clean_string($payload['senderName'], 120) . ' - ' . mx_clean_string($payload['senderPhone'], 40),
+        'Alici: ' . mx_clean_string($payload['recipientName'], 120) . ' - ' . mx_clean_string($payload['recipientPhone'], 40),
+        'Panel: https://myexpress.com.tr/kurye/panel/',
+    ]);
+    @mail($mailTo, $subject, $message, 'From: MyExpress <info@myexpress.com.tr>');
+
+    mx_json([
+        'ok' => true,
+        'trackingCode' => $trackingCode,
+        'redirect' => 'talep-basarili.html?no=' . rawurlencode($trackingCode),
+    ]);
+} catch (Throwable $error) {
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    error_log('MyExpress talep hatasi: ' . $error->getMessage());
+    mx_json(['ok' => false, 'message' => 'Talep alinirken bir sorun olustu. Lutfen tekrar deneyin.'], 500);
+}

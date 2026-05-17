@@ -1,6 +1,6 @@
 const header = document.querySelector('[data-header]');
 const menuToggle = document.querySelector('[data-menu-toggle]');
-const deliveryForm = document.querySelector('.delivery-form');
+const deliveryForm = document.querySelector('[data-home-form]');
 const addressInputs = document.querySelectorAll('[data-address-input]');
 const priceEstimate = document.querySelector('[data-price-estimate]');
 const detailPriceEstimate = document.querySelector('[data-detail-price-estimate]');
@@ -543,14 +543,44 @@ detailForm?.addEventListener('submit', (event) => {
 
   if (!detailForm.reportValidity()) return;
 
-  const params = new URLSearchParams(new FormData(detailForm));
-  params.set('pickupLat', pickup.dataset.selectedLat);
-  params.set('pickupLng', pickup.dataset.selectedLng);
-  params.set('dropoffLat', dropoff.dataset.selectedLat);
-  params.set('dropoffLng', dropoff.dataset.selectedLng);
-  params.set('price', detailPriceEstimate?.querySelector('strong')?.textContent || 'Hesaplanamadı');
-  params.set('completed', '1');
-  window.location.href = `talep.html?${params.toString()}`;
+  const formData = new FormData(detailForm);
+  const selectedService = detailForm.querySelector('input[name="service"]:checked');
+  const selectedPackage = detailForm.querySelector('input[name="packageType"]:checked');
+  const payload = Object.fromEntries(formData.entries());
+
+  payload.pickupLat = pickup.dataset.selectedLat;
+  payload.pickupLng = pickup.dataset.selectedLng;
+  payload.dropoffLat = dropoff.dataset.selectedLat;
+  payload.dropoffLng = dropoff.dataset.selectedLng;
+  payload.price = detailPriceEstimate?.querySelector('[data-summary-price]')?.textContent || 'Hesaplanamadı';
+  payload.serviceLabel = selectedService?.nextElementSibling?.textContent?.trim() || payload.service;
+  payload.packageLabel = selectedPackage?.nextElementSibling?.textContent?.trim() || payload.packageType;
+  payload.serviceAgreement = detailForm.elements.serviceAgreement.checked;
+  payload.kvkkConsent = detailForm.elements.kvkkConsent.checked;
+
+  const defaultButtonText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Talep gönderiliyor...';
+
+  fetch('api/talep-olustur.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(payload),
+  })
+    .then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || 'Talep gönderilemedi.');
+      }
+      window.location.href = data.redirect || 'talep-basarili.html';
+    })
+    .catch((error) => {
+      button.disabled = false;
+      button.textContent = error.message || defaultButtonText;
+      window.setTimeout(() => {
+        button.textContent = defaultButtonText;
+      }, 2200);
+    });
 });
 
 fillDetailFormFromParams();
