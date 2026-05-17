@@ -46,6 +46,7 @@ try {
 
     $stage = 'db-connect';
     $trackingCode = mx_tracking_code();
+    $priceResult = mx_calculate_price($payload);
     $pdo = mx_pdo();
     $pdo->beginTransaction();
 
@@ -85,8 +86,8 @@ try {
         ':package_label' => mx_clean_string($payload['packageLabel'] ?? $payload['packageType'], 80),
         ':delivery_time' => mx_clean_string($payload['deliveryTime'] ?? '', 80),
         ':note' => mx_clean_text($payload['note'] ?? '', 1000),
-        ':price' => mx_clean_string($payload['price'], 40),
-        ':distance_km' => is_numeric($payload['distanceKm'] ?? null) ? (float) $payload['distanceKm'] : null,
+        ':price' => $priceResult['price'],
+        ':distance_km' => $priceResult['distance_km'],
         ':sender_name' => mx_clean_string($payload['senderName'], 120),
         ':sender_phone' => mx_clean_string($payload['senderPhone'], 40),
         ':sender_email' => mx_clean_string($payload['senderEmail'] ?? '', 160),
@@ -121,7 +122,7 @@ try {
         $message = implode("\n", [
             'Yeni kurye talebi olusturuldu.',
             'Talep No: ' . $trackingCode,
-            'Gonderi ucreti: ' . mx_clean_string($payload['price'], 40),
+            'Gonderi ucreti: ' . $priceResult['price'],
             'Alim: ' . mx_clean_string($payload['pickup'], 255),
             'Teslim: ' . mx_clean_string($payload['dropoff'], 255),
             'Gonderici: ' . mx_clean_string($payload['senderName'], 120) . ' - ' . mx_clean_string($payload['senderPhone'], 40),

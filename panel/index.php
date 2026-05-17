@@ -41,27 +41,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) || !empty($config['panel_pass']));
 $requests = [];
 $statuses = mx_statuses();
+$filters = [
+    'status' => mx_clean_string($_GET['status'] ?? '', 32),
+    'date_from' => mx_clean_string($_GET['date_from'] ?? '', 10),
+    'date_to' => mx_clean_string($_GET['date_to'] ?? '', 10),
+    'tracking' => mx_clean_string($_GET['tracking'] ?? '', 40),
+    'sender' => mx_clean_string($_GET['sender'] ?? '', 80),
+    'recipient' => mx_clean_string($_GET['recipient'] ?? '', 80),
+    'phone' => mx_clean_string($_GET['phone'] ?? '', 40),
+    'address' => mx_clean_string($_GET['address'] ?? '', 100),
+];
+$sortKey = $_GET['sort'] ?? 'date';
+$dirParam = strtolower((string) ($_GET['dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
+
+$sortUrl = static function (string $key) use ($sortKey, $dirParam): string {
+    $query = $_GET;
+    $query['sort'] = $key;
+    $query['dir'] = ($sortKey === $key && $dirParam === 'asc') ? 'desc' : 'asc';
+    return '?' . http_build_query($query);
+};
+
+$sortMark = static function (string $key) use ($sortKey, $dirParam): string {
+    if ($sortKey !== $key) {
+        return '';
+    }
+    return $dirParam === 'asc' ? ' ↑' : ' ↓';
+};
 
 if (mx_panel_is_logged_in()) {
     try {
         $pdo = mx_pdo();
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
-        $filters = [
-            'status' => mx_clean_string($_GET['status'] ?? '', 32),
-            'date_from' => mx_clean_string($_GET['date_from'] ?? '', 10),
-            'date_to' => mx_clean_string($_GET['date_to'] ?? '', 10),
-            'q' => mx_clean_string($_GET['q'] ?? '', 80),
-        ];
         $sortMap = [
             'date' => 'created_at',
             'status' => 'status',
-            'price' => 'price',
+            'price' => "CAST(REPLACE(REPLACE(price, '.', ''), ' TL', '') AS UNSIGNED)",
+            'distance' => $hasDistance ? 'distance_km' : 'created_at',
+            'tracking' => 'tracking_code',
             'sender' => 'sender_name',
             'recipient' => 'recipient_name',
         ];
-        $sortKey = $_GET['sort'] ?? 'date';
         $sort = $sortMap[$sortKey] ?? 'created_at';
-        $dir = strtolower((string) ($_GET['dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+        $dir = $dirParam === 'asc' ? 'ASC' : 'DESC';
         $where = [];
         $params = [];
 
@@ -77,9 +98,25 @@ if (mx_panel_is_logged_in()) {
             $where[] = 'created_at <= :date_to';
             $params[':date_to'] = $filters['date_to'] . ' 23:59:59';
         }
-        if ($filters['q'] !== '') {
-            $where[] = '(tracking_code LIKE :q OR pickup LIKE :q OR dropoff LIKE :q OR sender_name LIKE :q OR sender_phone LIKE :q OR recipient_name LIKE :q OR recipient_phone LIKE :q)';
-            $params[':q'] = '%' . $filters['q'] . '%';
+        if ($filters['tracking'] !== '') {
+            $where[] = 'tracking_code LIKE :tracking';
+            $params[':tracking'] = '%' . $filters['tracking'] . '%';
+        }
+        if ($filters['sender'] !== '') {
+            $where[] = 'sender_name LIKE :sender';
+            $params[':sender'] = '%' . $filters['sender'] . '%';
+        }
+        if ($filters['recipient'] !== '') {
+            $where[] = 'recipient_name LIKE :recipient';
+            $params[':recipient'] = '%' . $filters['recipient'] . '%';
+        }
+        if ($filters['phone'] !== '') {
+            $where[] = '(sender_phone LIKE :phone OR recipient_phone LIKE :phone)';
+            $params[':phone'] = '%' . $filters['phone'] . '%';
+        }
+        if ($filters['address'] !== '') {
+            $where[] = '(pickup LIKE :address OR dropoff LIKE :address OR pickup_street LIKE :address OR dropoff_street LIKE :address)';
+            $params[':address'] = '%' . $filters['address'] . '%';
         }
 
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
@@ -114,7 +151,10 @@ if (mx_panel_is_logged_in()) {
           <h1>Talep Paneli</h1>
         </div>
         <?php if (mx_panel_is_logged_in()): ?>
-          <a class="btn btn-secondary" href="logout.php">Çıkış Yap</a>
+          <div class="panel-header-actions">
+            <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
+            <a class="btn btn-secondary" href="logout.php">Çıkış Yap</a>
+          </div>
         <?php endif; ?>
       </section>
 
@@ -146,25 +186,15 @@ if (mx_panel_is_logged_in()) {
                 <?php endforeach; ?>
               </select>
             </label>
-            <label>Başlangıç <input type="date" name="date_from" value="<?= mx_h($_GET['date_from'] ?? '') ?>"></label>
-            <label>Bitiş <input type="date" name="date_to" value="<?= mx_h($_GET['date_to'] ?? '') ?>"></label>
-            <label>Arama <input name="q" value="<?= mx_h($_GET['q'] ?? '') ?>" placeholder="Talep no, ad, telefon, adres"></label>
-            <label>Sıralama
-              <select name="sort">
-                <option value="date" <?= ($_GET['sort'] ?? 'date') === 'date' ? 'selected' : '' ?>>Tarih</option>
-                <option value="status" <?= ($_GET['sort'] ?? '') === 'status' ? 'selected' : '' ?>>Durum</option>
-                <option value="sender" <?= ($_GET['sort'] ?? '') === 'sender' ? 'selected' : '' ?>>Gönderici</option>
-                <option value="recipient" <?= ($_GET['sort'] ?? '') === 'recipient' ? 'selected' : '' ?>>Alıcı</option>
-                <option value="price" <?= ($_GET['sort'] ?? '') === 'price' ? 'selected' : '' ?>>Ücret</option>
-              </select>
-            </label>
-            <label>Yön
-              <select name="dir">
-                <option value="desc" <?= ($_GET['dir'] ?? 'desc') === 'desc' ? 'selected' : '' ?>>Azalan</option>
-                <option value="asc" <?= ($_GET['dir'] ?? '') === 'asc' ? 'selected' : '' ?>>Artan</option>
-              </select>
-            </label>
+            <label>Başlangıç <input type="date" name="date_from" value="<?= mx_h($filters['date_from']) ?>"></label>
+            <label>Bitiş <input type="date" name="date_to" value="<?= mx_h($filters['date_to']) ?>"></label>
+            <label>Talep no <input name="tracking" value="<?= mx_h($filters['tracking']) ?>" placeholder="MX..."></label>
+            <label>Gönderici <input name="sender" value="<?= mx_h($filters['sender']) ?>" placeholder="Ad soyad"></label>
+            <label>Alıcı <input name="recipient" value="<?= mx_h($filters['recipient']) ?>" placeholder="Ad soyad"></label>
+            <label>Telefon <input name="phone" value="<?= mx_h($filters['phone']) ?>" placeholder="05..."></label>
+            <label>Adres <input name="address" value="<?= mx_h($filters['address']) ?>" placeholder="Mahalle, sokak"></label>
             <button class="btn btn-primary" type="submit">Filtrele</button>
+            <a class="btn btn-secondary" href="index.php">Temizle</a>
           </form>
           <?php if ($panelError !== ''): ?>
             <p class="panel-alert"><?= mx_h($panelError) ?></p>
@@ -173,31 +203,31 @@ if (mx_panel_is_logged_in()) {
             <table class="panel-table">
               <thead>
                 <tr>
-                  <th>Talep</th>
-                  <th>Durum</th>
-                  <th>Gönderici</th>
-                  <th>Alıcı</th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('tracking')) ?>">Talep<?= mx_h($sortMark('tracking')) ?></a></th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('status')) ?>">Durum<?= mx_h($sortMark('status')) ?></a></th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('sender')) ?>">Gönderici<?= mx_h($sortMark('sender')) ?></a></th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('recipient')) ?>">Alıcı<?= mx_h($sortMark('recipient')) ?></a></th>
                   <th>Adres</th>
-                  <th>Mesafe</th>
-                  <th>Ücret</th>
-                  <th>Tarih</th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('distance')) ?>">Mesafe<?= mx_h($sortMark('distance')) ?></a></th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('price')) ?>">Ücret<?= mx_h($sortMark('price')) ?></a></th>
+                  <th><a class="sort-link" href="<?= mx_h($sortUrl('date')) ?>">Tarih<?= mx_h($sortMark('date')) ?></a></th>
                 </tr>
               </thead>
               <tbody>
                 <?php foreach ($requests as $request): ?>
                   <tr>
-                    <td><a href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
+                    <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
                     <td><span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span></td>
-                    <td><?= mx_h($request['sender_name']) ?> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['sender_phone'])) ?>" target="_blank" rel="noopener" aria-label="Gönderici WhatsApp">W</a><br><a href="tel:<?= mx_h($request['sender_phone']) ?>"><small><?= mx_h($request['sender_phone']) ?></small></a></td>
-                    <td><?= mx_h($request['recipient_name']) ?> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['recipient_phone'])) ?>" target="_blank" rel="noopener" aria-label="Alıcı WhatsApp">W</a><br><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><small><?= mx_h($request['recipient_phone']) ?></small></a></td>
-                    <td><strong>Alım:</strong> <?= mx_h($request['pickup']) ?><br><small><strong>Teslim:</strong> <?= mx_h($request['dropoff']) ?></small></td>
+                    <td><span class="person-name"><?= mx_h($request['sender_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['sender_phone'])) ?>" target="_blank" rel="noopener" aria-label="Gönderici WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['sender_phone']) ?>"><small><?= mx_h($request['sender_phone']) ?></small></a></td>
+                    <td><span class="person-name"><?= mx_h($request['recipient_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['recipient_phone'])) ?>" target="_blank" rel="noopener" aria-label="Alıcı WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><small><?= mx_h($request['recipient_phone']) ?></small></a></td>
+                    <td><span class="route-label">Alım</span> <?= mx_h($request['pickup']) ?><br><small><span class="route-label">Teslim</span> <?= mx_h($request['dropoff']) ?></small></td>
                     <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
                     <td><?= mx_h($request['price']) ?></td>
-                    <td><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?><br><small><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></small></td>
+                    <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
                   </tr>
                 <?php endforeach; ?>
                 <?php if (!$requests): ?>
-                  <tr><td colspan="6">Henüz talep yok.</td></tr>
+                  <tr><td colspan="8">Henüz talep yok.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>

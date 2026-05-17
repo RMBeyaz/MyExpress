@@ -228,6 +228,145 @@ function mx_whatsapp_url(string $phone, string $message = ''): string
     return 'https://wa.me/' . $digits . ($message !== '' ? '?text=' . rawurlencode($message) : '');
 }
 
+function mx_default_pricing_settings(): array
+{
+    return [
+        'services' => [
+            'normal' => ['base' => 240.0, 'km' => 14.0, 'multiplier' => 1.0, 'label' => 'Motorlu Kurye'],
+            'express' => ['base' => 320.0, 'km' => 17.0, 'multiplier' => 1.25, 'label' => 'Express Kurye'],
+            'vip' => ['base' => 420.0, 'km' => 20.0, 'multiplier' => 1.55, 'label' => 'VIP Kurye'],
+            'aracli' => ['base' => 650.0, 'km' => 28.0, 'multiplier' => 1.75, 'label' => 'Arabalı Kurye'],
+            'eticaret' => ['base' => 260.0, 'km' => 13.0, 'multiplier' => 0.95, 'label' => 'E-Ticaret Teslimatı'],
+        ],
+        'packages' => [
+            'evrak' => ['fee' => 0.0, 'label' => 'Evrak'],
+            'zarf' => ['fee' => 0.0, 'label' => 'Zarf'],
+            'kucuk' => ['fee' => 60.0, 'label' => 'Küçük paket'],
+            'orta' => ['fee' => 120.0, 'label' => 'Orta paket'],
+            'buyuk' => ['fee' => 220.0, 'label' => 'Büyük paket'],
+            'hacimli' => ['fee' => 240.0, 'label' => 'Hacimli paket'],
+            'motorDisi' => ['fee' => 430.0, 'label' => 'Motor çantasına sığmayan'],
+        ],
+        'rules' => [
+            'routeMultiplier' => 1.28,
+            'minSameAreaKm' => 4.0,
+            'minDefaultKm' => 7.0,
+            'bridgeFee' => 90.0,
+            'roundTo' => 10.0,
+            'homeMinFactor' => 0.92,
+            'homeMaxFactor' => 1.08,
+        ],
+    ];
+}
+
+function mx_pricing_settings(): array
+{
+    $settings = mx_default_pricing_settings();
+
+    try {
+        if (!mx_table_exists('pricing_settings')) {
+            return $settings;
+        }
+
+        $rows = mx_pdo()->query('SELECT setting_key, label, numeric_value FROM pricing_settings')->fetchAll();
+        foreach ($rows as $row) {
+            $key = (string) $row['setting_key'];
+            $value = (float) $row['numeric_value'];
+            $label = (string) $row['label'];
+
+            if (preg_match('/^service\.([^.]+)\.(base|km|multiplier)$/', $key, $matches)) {
+                $service = $matches[1];
+                $field = $matches[2];
+                if (!isset($settings['services'][$service])) {
+                    $settings['services'][$service] = ['base' => 0.0, 'km' => 0.0, 'multiplier' => 1.0, 'label' => $label];
+                }
+                $settings['services'][$service][$field] = $value;
+                continue;
+            }
+
+            if (preg_match('/^package\.([^.]+)\.fee$/', $key, $matches)) {
+                $package = $matches[1];
+                if (!isset($settings['packages'][$package])) {
+                    $settings['packages'][$package] = ['fee' => 0.0, 'label' => $label];
+                }
+                $settings['packages'][$package]['fee'] = $value;
+                continue;
+            }
+
+            $ruleMap = [
+                'rule.route_multiplier' => 'routeMultiplier',
+                'rule.min_same_area_km' => 'minSameAreaKm',
+                'rule.min_default_km' => 'minDefaultKm',
+                'rule.bridge_fee' => 'bridgeFee',
+                'rule.round_to' => 'roundTo',
+                'rule.home_min_factor' => 'homeMinFactor',
+                'rule.home_max_factor' => 'homeMaxFactor',
+            ];
+
+            if (isset($ruleMap[$key])) {
+                $settings['rules'][$ruleMap[$key]] = $value;
+            } elseif (isset($settings['rules'][$key])) {
+                $settings['rules'][$key] = $value;
+            }
+        }
+    } catch (Throwable $error) {
+        mx_log_error('pricing settings fallback', $error);
+    }
+
+    return $settings;
+}
+
+function mx_distance_km(float $fromLat, float $fromLng, float $toLat, float $toLng): float
+{
+    $earthRadius = 6371;
+    $latDelta = deg2rad($toLat - $fromLat);
+    $lngDelta = deg2rad($toLng - $fromLng);
+    $a = sin($latDelta / 2) ** 2
+        + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($lngDelta / 2) ** 2;
+
+    return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
+}
+
+function mx_round_price(float $value, float $roundTo): float
+{
+    $roundTo = $roundTo > 0 ? $roundTo : 10.0;
+    return round($value / $roundTo) * $roundTo;
+}
+
+function mx_calculate_price(array $payload): array
+{
+    $pickupLat = is_numeric($payload['pickupLat'] ?? null) ? (float) $payload['pickupLat'] : null;
+    $pickupLng = is_numeric($payload['pickupLng'] ?? null) ? (float) $payload['pickupLng'] : null;
+    $dropoffLat = is_numeric($payload['dropoffLat'] ?? null) ? (float) $payload['dropoffLat'] : null;
+    $dropoffLng = is_numeric($payload['dropoffLng'] ?? null) ? (float) $payload['dropoffLng'] : null;
+
+    if ($pickupLat === null || $pickupLng === null || $dropoffLat === null || $dropoffLng === null) {
+        return ['price' => mx_clean_string($payload['price'] ?? 'Hesaplanamadı', 40), 'distance_km' => null];
+    }
+
+    $pricing = mx_pricing_settings();
+    $serviceKey = mx_clean_string($payload['service'] ?? 'normal', 40);
+    $packageKey = mx_clean_string($payload['packageType'] ?? 'evrak', 40);
+    $service = $pricing['services'][$serviceKey] ?? $pricing['services']['normal'];
+    $package = $pricing['packages'][$packageKey] ?? ['fee' => 0.0];
+    $rules = $pricing['rules'];
+
+    $rawDistance = mx_distance_km($pickupLat, $pickupLng, $dropoffLat, $dropoffLng);
+    $sameArea = mx_clean_string($payload['pickup'] ?? '', 255) === mx_clean_string($payload['dropoff'] ?? '', 255);
+    $minimumKm = $sameArea ? (float) $rules['minSameAreaKm'] : (float) $rules['minDefaultKm'];
+    $billableDistance = max($rawDistance * (float) $rules['routeMultiplier'], $minimumKm);
+    $bridgeFee = (($pickupLng < 29 && $dropoffLng >= 29) || ($pickupLng >= 29 && $dropoffLng < 29))
+        ? (float) $rules['bridgeFee']
+        : 0.0;
+    $price = ((float) $service['base'] + ($billableDistance * (float) $service['km']) + (float) $package['fee'] + $bridgeFee)
+        * (float) $service['multiplier'];
+
+    return [
+        'price' => number_format(mx_round_price($price, (float) $rules['roundTo']), 0, ',', '.') . ' TL',
+        'distance_km' => round($billableDistance, 2),
+    ];
+}
+
 function mx_h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');

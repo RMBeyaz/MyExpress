@@ -107,7 +107,7 @@ const addressLocations = [
   { display: 'Cihangir Mahallesi, Beyoğlu', search: 'cihangir mahallesi beyoglu', lat: 41.031, lng: 28.984, type: 'Mahalle' },
 ];
 
-const servicePricing = {
+let servicePricing = {
   normal: { base: 240, km: 14, multiplier: 1, label: 'Motorlu Kurye' },
   express: { base: 320, km: 17, multiplier: 1.25, label: 'Express Kurye' },
   vip: { base: 420, km: 20, multiplier: 1.55, label: 'VIP Kurye' },
@@ -115,7 +115,7 @@ const servicePricing = {
   eticaret: { base: 260, km: 13, multiplier: 0.95, label: 'E-Ticaret Teslimatı' },
 };
 
-const packageFees = {
+let packageFees = {
   evrak: 0,
   zarf: 0,
   kucuk: 60,
@@ -123,6 +123,16 @@ const packageFees = {
   buyuk: 220,
   hacimli: 240,
   motorDisi: 430,
+};
+
+let pricingRules = {
+  routeMultiplier: 1.28,
+  minSameAreaKm: 4,
+  minDefaultKm: 7,
+  bridgeFee: 90,
+  roundTo: 10,
+  homeMinFactor: 0.92,
+  homeMaxFactor: 1.08,
 };
 
 const normalizeText = (value) => value
@@ -150,7 +160,33 @@ const calculateDistance = (from, to) => {
   return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-const formatPrice = (value) => `${Math.round(value / 10) * 10} TL`;
+const formatPrice = (value) => {
+  const roundTo = Number(pricingRules.roundTo) > 0 ? Number(pricingRules.roundTo) : 10;
+  return `${Math.round(value / roundTo) * roundTo} TL`;
+};
+
+const loadPricingConfig = async () => {
+  try {
+    const response = await fetch('api/pricing-config.php', { headers: { Accept: 'application/json' } });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.ok || !data.pricing) return;
+
+    if (data.pricing.services) servicePricing = data.pricing.services;
+    if (data.pricing.packages) {
+      packageFees = Object.fromEntries(
+        Object.entries(data.pricing.packages).map(([key, value]) => [key, Number(value.fee) || 0])
+      );
+    }
+    if (data.pricing.rules) pricingRules = { ...pricingRules, ...data.pricing.rules };
+
+    updatePriceEstimate();
+    updateDetailEstimate();
+  } catch {
+    // Fallback constants keep the form usable if the pricing endpoint is unavailable.
+  }
+};
+
 
 const isValidTckn = (value) => {
   if (!value) return true;
@@ -192,11 +228,14 @@ const updatePriceEstimate = () => {
   }
 
   const rawDistance = calculateDistance(pickup, dropoff);
-  const billableDistance = Math.max(rawDistance * 1.28, pickup.display === dropoff.display ? 4 : 7);
-  const bridgeFee = pickup.lng < 29 && dropoff.lng >= 29 || pickup.lng >= 29 && dropoff.lng < 29 ? 90 : 0;
+  const billableDistance = Math.max(
+    rawDistance * Number(pricingRules.routeMultiplier),
+    pickup.display === dropoff.display ? Number(pricingRules.minSameAreaKm) : Number(pricingRules.minDefaultKm)
+  );
+  const bridgeFee = pickup.lng < 29 && dropoff.lng >= 29 || pickup.lng >= 29 && dropoff.lng < 29 ? Number(pricingRules.bridgeFee) : 0;
   const estimate = (service.base + billableDistance * service.km + packageFee + bridgeFee) * service.multiplier;
-  const min = estimate * 0.92;
-  const max = estimate * 1.08;
+  const min = estimate * Number(pricingRules.homeMinFactor);
+  const max = estimate * Number(pricingRules.homeMaxFactor);
 
   priceEstimate.querySelector('strong').textContent = `${formatPrice(min)} - ${formatPrice(max)}`;
 };
@@ -205,15 +244,21 @@ const calculateEstimate = (pickup, dropoff, serviceValue = 'normal', packageValu
   const service = servicePricing[serviceValue] || servicePricing.normal;
   const packageFee = packageFees[packageValue] || 0;
   const rawDistance = calculateDistance(pickup, dropoff);
-  const billableDistance = Math.max(rawDistance * 1.28, pickup.display === dropoff.display ? 4 : 7);
-  const bridgeFee = pickup.lng < 29 && dropoff.lng >= 29 || pickup.lng >= 29 && dropoff.lng < 29 ? 90 : 0;
+  const billableDistance = Math.max(
+    rawDistance * Number(pricingRules.routeMultiplier),
+    pickup.display === dropoff.display ? Number(pricingRules.minSameAreaKm) : Number(pricingRules.minDefaultKm)
+  );
+  const bridgeFee = pickup.lng < 29 && dropoff.lng >= 29 || pickup.lng >= 29 && dropoff.lng < 29 ? Number(pricingRules.bridgeFee) : 0;
   const estimate = (service.base + billableDistance * service.km + packageFee + bridgeFee) * service.multiplier;
   return formatPrice(estimate);
 };
 
 const calculateBillableDistance = (pickup, dropoff) => {
   const rawDistance = calculateDistance(pickup, dropoff);
-  return Math.max(rawDistance * 1.28, pickup.display === dropoff.display ? 4 : 7);
+  return Math.max(
+    rawDistance * Number(pricingRules.routeMultiplier),
+    pickup.display === dropoff.display ? Number(pricingRules.minSameAreaKm) : Number(pricingRules.minDefaultKm)
+  );
 };
 
 const updateDetailEstimate = () => {
@@ -594,6 +639,9 @@ detailForm?.addEventListener('submit', (event) => {
 
 fillDetailFormFromParams();
 updateDetailEstimate();
+if (priceEstimate || detailPriceEstimate) {
+  loadPricingConfig();
+}
 
 detailForm?.querySelectorAll('input[type="radio"], select').forEach((input) => {
   input.addEventListener('change', updateDetailEstimate);

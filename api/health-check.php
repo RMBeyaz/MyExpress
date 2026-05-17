@@ -35,6 +35,7 @@ $checks = [
         'courier_requests' => false,
         'request_status_logs' => false,
         'request_audit_logs' => false,
+        'pricing_settings' => false,
     ],
     'columns' => [
         'courier_requests.distance_km' => false,
@@ -44,6 +45,11 @@ $checks = [
         'ok' => null,
         'error_code' => null,
         'error_hint' => null,
+    ],
+    'pricing' => [
+        'settings_loaded' => false,
+        'service_count' => 0,
+        'package_count' => 0,
     ],
 ];
 
@@ -71,6 +77,12 @@ try {
         $checks['tables'][$table] = (int) $stmt->fetchColumn() === 1;
     }
     $checks['columns']['courier_requests.distance_km'] = mx_column_exists('courier_requests', 'distance_km');
+    if ($checks['tables']['pricing_settings']) {
+        $pricing = mx_pricing_settings();
+        $checks['pricing']['settings_loaded'] = true;
+        $checks['pricing']['service_count'] = count($pricing['services']);
+        $checks['pricing']['package_count'] = count($pricing['packages']);
+    }
 
     if ($checks['write_test']['requested']) {
         try {

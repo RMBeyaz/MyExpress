@@ -69,7 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $params[':distance_km'] = is_numeric($_POST['distance_km'] ?? null) ? (float) $_POST['distance_km'] : null;
         }
         $stmt->execute($params);
-        mx_audit_log($id, 'details_update', 'Talep detaylari panelden guncellendi.');
+        $changeNote = mx_clean_text($_POST['change_note'] ?? '', 1000);
+        mx_audit_log($id, 'details_update', 'Talep detaylari panelden guncellendi.' . ($changeNote !== '' ? ' Not: ' . $changeNote : ''));
     }
 
     header('Location: talep.php?id=' . $id);
@@ -116,51 +117,8 @@ $statuses = mx_statuses();
         <div class="panel-header-actions">
           <span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span>
           <a class="btn btn-secondary" href="index.php">Listeye Dön</a>
+          <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
         </div>
-      </section>
-
-      <section class="panel-detail-grid">
-        <article class="panel-card">
-          <h2>Gönderi</h2>
-          <dl class="panel-detail-list">
-            <dt>Durum</dt><dd><?= mx_h(mx_status_label($request['status'])) ?></dd>
-            <dt>Ücret</dt><dd><?= mx_h($request['price']) ?></dd>
-            <dt>Mesafe</dt><dd><?= isset($request['distance_km']) && $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></dd>
-            <dt>Hizmet</dt><dd><?= mx_h($request['service_label']) ?></dd>
-            <dt>Paket</dt><dd><?= mx_h($request['package_label']) ?></dd>
-            <dt>Teslim zamanı</dt><dd><?= mx_h($request['delivery_time']) ?></dd>
-            <dt>Oluşturma</dt><dd><?= mx_h($request['created_at']) ?></dd>
-            <dt>Not</dt><dd><?= mx_h($request['note']) ?></dd>
-          </dl>
-        </article>
-
-        <article class="panel-card">
-          <h2>Adresler</h2>
-          <h3>Alım</h3>
-          <p><strong><?= mx_h($request['pickup']) ?></strong><br><?= nl2br(mx_h($request['pickup_street'])) ?></p>
-          <h3>Teslim</h3>
-          <p><strong><?= mx_h($request['dropoff']) ?></strong><br><?= nl2br(mx_h($request['dropoff_street'])) ?></p>
-        </article>
-
-        <article class="panel-card">
-          <h2>Gönderici</h2>
-          <dl class="panel-detail-list panel-detail-list-compact">
-            <dt>Ad soyad</dt><dd><?= mx_h($request['sender_name']) ?></dd>
-            <dt>Telefon</dt><dd><a href="tel:<?= mx_h($request['sender_phone']) ?>"><?= mx_h($request['sender_phone']) ?></a></dd>
-            <dt>E-posta</dt><dd><?= mx_h($request['sender_email']) ?></dd>
-            <dt>TCKN</dt><dd><?= mx_h($request['sender_tckn']) ?></dd>
-          </dl>
-        </article>
-
-        <article class="panel-card">
-          <h2>Alıcı</h2>
-          <dl class="panel-detail-list panel-detail-list-compact">
-            <dt>Ad soyad</dt><dd><?= mx_h($request['recipient_name']) ?></dd>
-            <dt>Telefon</dt><dd><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><?= mx_h($request['recipient_phone']) ?></a></dd>
-            <dt>E-posta</dt><dd><?= mx_h($request['recipient_email']) ?></dd>
-            <dt>TCKN</dt><dd><?= mx_h($request['recipient_tckn']) ?></dd>
-          </dl>
-        </article>
       </section>
 
       <section class="panel-detail-grid">
@@ -168,19 +126,21 @@ $statuses = mx_statuses();
           <h2>Durum Güncelle</h2>
           <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
           <input type="hidden" name="action" value="status">
-          <div class="status-choice-grid">
-            <?php foreach ($statuses as $key => $label): ?>
-              <label class="status-choice <?= $request['status'] === $key ? 'is-selected' : '' ?>">
-                <input type="radio" name="status" value="<?= mx_h($key) ?>" <?= $request['status'] === $key ? 'checked' : '' ?>>
-                <span><?= mx_h($label) ?></span>
-              </label>
-            <?php endforeach; ?>
+          <div class="status-update-row">
+            <label>
+              Durum
+              <select name="status">
+                <?php foreach ($statuses as $key => $label): ?>
+                  <option value="<?= mx_h($key) ?>" <?= $request['status'] === $key ? 'selected' : '' ?>><?= mx_h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <button class="btn btn-primary" type="submit">Durumu Güncelle</button>
           </div>
           <label>
             İç not
             <textarea name="note" placeholder="Arandı, ulaşılamadı, kurye atandı..."></textarea>
           </label>
-          <button class="btn btn-primary" type="submit">Güncelle</button>
         </form>
 
         <article class="panel-card">
@@ -193,31 +153,37 @@ $statuses = mx_statuses();
         </article>
       </section>
 
-      <form class="panel-card panel-edit-form" method="post">
-        <h2>Talep Bilgilerini Düzenle</h2>
+      <form class="panel-card panel-edit-form is-readonly" method="post" data-panel-edit-form>
+        <div class="panel-card-heading">
+          <h2>Talep Bilgileri</h2>
+          <div class="panel-header-actions">
+            <button class="btn btn-secondary" type="button" data-edit-toggle>Düzenle</button>
+            <button class="btn btn-primary" type="submit" data-save-edit hidden>Değişiklikleri Kaydet</button>
+          </div>
+        </div>
         <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
         <input type="hidden" name="action" value="details">
         <div class="panel-edit-grid">
-          <label>Alım bölgesi <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required></label>
-          <label>Teslim bölgesi <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required></label>
-          <label>Alım açık adres <textarea name="pickup_street" required><?= mx_h($request['pickup_street']) ?></textarea></label>
-          <label>Teslim açık adres <textarea name="dropoff_street" required><?= mx_h($request['dropoff_street']) ?></textarea></label>
-          <label>Hizmet <input name="service_label" value="<?= mx_h($request['service_label']) ?>"></label>
-          <label>Paket <input name="package_label" value="<?= mx_h($request['package_label']) ?>"></label>
-          <label>Teslim zamanı <input name="delivery_time" value="<?= mx_h($request['delivery_time']) ?>"></label>
-          <label>Ücret <input name="price" value="<?= mx_h($request['price']) ?>" required></label>
-          <label>Mesafe km <input name="distance_km" value="<?= isset($request['distance_km']) ? mx_h($request['distance_km']) : '' ?>" inputmode="decimal"></label>
-          <label>Not <textarea name="note"><?= mx_h($request['note']) ?></textarea></label>
-          <label>Gönderici ad soyad <input name="sender_name" value="<?= mx_h($request['sender_name']) ?>" required></label>
-          <label>Gönderici telefon <input name="sender_phone" value="<?= mx_h($request['sender_phone']) ?>" required></label>
-          <label>Gönderici e-posta <input name="sender_email" value="<?= mx_h($request['sender_email']) ?>"></label>
-          <label>Gönderici TCKN <input name="sender_tckn" value="<?= mx_h($request['sender_tckn']) ?>" maxlength="11" required></label>
-          <label>Alıcı ad soyad <input name="recipient_name" value="<?= mx_h($request['recipient_name']) ?>" required></label>
-          <label>Alıcı telefon <input name="recipient_phone" value="<?= mx_h($request['recipient_phone']) ?>" required></label>
-          <label>Alıcı e-posta <input name="recipient_email" value="<?= mx_h($request['recipient_email']) ?>"></label>
-          <label>Alıcı TCKN <input name="recipient_tckn" value="<?= mx_h($request['recipient_tckn']) ?>" maxlength="11" required></label>
+          <label>Alım bölgesi <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly></label>
+          <label>Teslim bölgesi <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly></label>
+          <label>Alım açık adres <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
+          <label>Teslim açık adres <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
+          <label>Hizmet <input name="service_label" value="<?= mx_h($request['service_label']) ?>" readonly></label>
+          <label>Paket <input name="package_label" value="<?= mx_h($request['package_label']) ?>" readonly></label>
+          <label>Teslim zamanı <input name="delivery_time" value="<?= mx_h($request['delivery_time']) ?>" readonly></label>
+          <label>Ücret <input name="price" value="<?= mx_h($request['price']) ?>" required readonly></label>
+          <label>Mesafe km <input name="distance_km" value="<?= isset($request['distance_km']) ? mx_h($request['distance_km']) : '' ?>" inputmode="decimal" readonly></label>
+          <label>Not <textarea name="note" readonly><?= mx_h($request['note']) ?></textarea></label>
+          <label>Gönderici ad soyad <input name="sender_name" value="<?= mx_h($request['sender_name']) ?>" required readonly></label>
+          <label>Gönderici telefon <input name="sender_phone" value="<?= mx_h($request['sender_phone']) ?>" required readonly></label>
+          <label>Gönderici e-posta <input name="sender_email" value="<?= mx_h($request['sender_email']) ?>" readonly></label>
+          <label>Gönderici TCKN <input name="sender_tckn" value="<?= mx_h($request['sender_tckn']) ?>" maxlength="11" required readonly></label>
+          <label>Alıcı ad soyad <input name="recipient_name" value="<?= mx_h($request['recipient_name']) ?>" required readonly></label>
+          <label>Alıcı telefon <input name="recipient_phone" value="<?= mx_h($request['recipient_phone']) ?>" required readonly></label>
+          <label>Alıcı e-posta <input name="recipient_email" value="<?= mx_h($request['recipient_email']) ?>" readonly></label>
+          <label>Alıcı TCKN <input name="recipient_tckn" value="<?= mx_h($request['recipient_tckn']) ?>" maxlength="11" required readonly></label>
+          <label>Değişiklik notu <textarea name="change_note" placeholder="Adres düzeltildi, telefon güncellendi..." readonly></textarea></label>
         </div>
-        <button class="btn btn-primary" type="submit">Bilgileri Kaydet</button>
       </form>
 
       <?php if ($auditLogs): ?>
@@ -231,5 +197,16 @@ $statuses = mx_statuses();
         </section>
       <?php endif; ?>
     </main>
+    <script>
+      const editForm = document.querySelector('[data-panel-edit-form]');
+      const editToggle = document.querySelector('[data-edit-toggle]');
+      const saveButton = document.querySelector('[data-save-edit]');
+      editToggle?.addEventListener('click', () => {
+        editForm?.classList.remove('is-readonly');
+        editForm?.querySelectorAll('input[readonly], textarea[readonly]').forEach((field) => field.removeAttribute('readonly'));
+        editToggle.hidden = true;
+        if (saveButton) saveButton.hidden = false;
+      });
+    </script>
   </body>
 </html>
