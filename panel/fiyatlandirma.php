@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 session_start();
 require __DIR__ . '/../api/bootstrap.php';
-mx_panel_require_login();
+mx_panel_require_pricing_manager();
 
 $pdo = mx_pdo();
 $message = '';
@@ -82,6 +82,9 @@ foreach ($rows as $row) {
         </div>
         <div class="panel-header-actions">
           <a class="btn btn-secondary" href="index.php">Talepler</a>
+          <?php if (mx_panel_can_manage_users()): ?>
+            <a class="btn btn-secondary" href="kullanicilar.php">Kullanıcılar</a>
+          <?php endif; ?>
           <a class="btn btn-secondary" href="logout.php">Çıkış Yap</a>
         </div>
       </section>

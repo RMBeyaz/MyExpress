@@ -124,6 +124,74 @@ function mx_tracking_code(): string
     return 'MX' . date('ymd') . strtoupper(bin2hex(random_bytes(3)));
 }
 
+function mx_tracking_code_for_id(int $id): string
+{
+    return sprintf('MX%s-%05d', date('ymd'), $id);
+}
+
+function mx_roles(): array
+{
+    return [
+        'admin' => 'Admin',
+        'manager' => 'Yönetici',
+        'staff' => 'Çalışan',
+    ];
+}
+
+function mx_role_label(string $role): string
+{
+    $roles = mx_roles();
+    return $roles[$role] ?? $role;
+}
+
+function mx_panel_login(string $username, string $password): bool
+{
+    try {
+        if (mx_table_exists('panel_users')) {
+            $stmt = mx_pdo()->prepare('SELECT id, username, full_name, role, password_hash, is_active FROM panel_users WHERE username = :username LIMIT 1');
+            $stmt->execute([':username' => $username]);
+            $user = $stmt->fetch();
+            if ($user && (int) $user['is_active'] === 1 && password_verify($password, (string) $user['password_hash'])) {
+                session_regenerate_id(true);
+                $_SESSION['mx_panel_auth'] = true;
+                $_SESSION['mx_panel_user'] = (string) $user['username'];
+                $_SESSION['mx_panel_user_id'] = (int) $user['id'];
+                $_SESSION['mx_panel_full_name'] = (string) $user['full_name'];
+                $_SESSION['mx_panel_role'] = (string) $user['role'];
+                $_SESSION['mx_panel_last_activity'] = time();
+
+                mx_pdo()->prepare('UPDATE panel_users SET last_login_at = NOW() WHERE id = :id')->execute([':id' => (int) $user['id']]);
+                mx_audit_log(null, 'login', 'Panel girisi yapildi.');
+                return true;
+            }
+        }
+    } catch (Throwable $error) {
+        mx_log_error('panel db login failed', $error, ['username' => $username]);
+    }
+
+    $config = mx_config();
+    $panelUser = (string) ($config['panel_user'] ?? '');
+    $panelHash = (string) ($config['panel_pass_hash'] ?? '');
+    $panelPass = (string) ($config['panel_pass'] ?? '');
+    $passwordOk = $panelHash !== ''
+        ? password_verify($password, $panelHash)
+        : ($panelPass !== '' && hash_equals($panelPass, $password));
+
+    if ($panelUser !== '' && hash_equals($panelUser, $username) && $passwordOk) {
+        session_regenerate_id(true);
+        $_SESSION['mx_panel_auth'] = true;
+        $_SESSION['mx_panel_user'] = $panelUser;
+        $_SESSION['mx_panel_user_id'] = null;
+        $_SESSION['mx_panel_full_name'] = 'Sistem Admin';
+        $_SESSION['mx_panel_role'] = 'admin';
+        $_SESSION['mx_panel_last_activity'] = time();
+        mx_audit_log(null, 'login', 'Config admin ile panel girisi yapildi.');
+        return true;
+    }
+
+    return false;
+}
+
 function mx_panel_is_logged_in(): bool
 {
     if (!isset($_SESSION['mx_panel_auth']) || $_SESSION['mx_panel_auth'] !== true) {
@@ -172,6 +240,56 @@ function mx_status_label(string $status): string
 function mx_panel_user(): string
 {
     return (string) ($_SESSION['mx_panel_user'] ?? 'panel');
+}
+
+function mx_panel_role(): string
+{
+    return (string) ($_SESSION['mx_panel_role'] ?? 'staff');
+}
+
+function mx_panel_is_admin(): bool
+{
+    return mx_panel_role() === 'admin';
+}
+
+function mx_panel_can_manage_users(): bool
+{
+    return in_array(mx_panel_role(), ['admin', 'manager'], true);
+}
+
+function mx_panel_can_manage_pricing(): bool
+{
+    return in_array(mx_panel_role(), ['admin', 'manager'], true);
+}
+
+function mx_panel_require_admin()
+{
+    mx_panel_require_login();
+    if (!mx_panel_is_admin()) {
+        http_response_code(403);
+        echo 'Bu sayfa icin admin yetkisi gerekir.';
+        exit;
+    }
+}
+
+function mx_panel_require_user_manager()
+{
+    mx_panel_require_login();
+    if (!mx_panel_can_manage_users()) {
+        http_response_code(403);
+        echo 'Bu sayfa icin yonetici yetkisi gerekir.';
+        exit;
+    }
+}
+
+function mx_panel_require_pricing_manager()
+{
+    mx_panel_require_login();
+    if (!mx_panel_can_manage_pricing()) {
+        http_response_code(403);
+        echo 'Bu sayfa icin fiyatlandirma yetkisi gerekir.';
+        exit;
+    }
 }
 
 function mx_table_exists(string $table): bool

@@ -117,7 +117,6 @@ $statuses = mx_statuses();
         <div class="panel-header-actions">
           <span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span>
           <a class="btn btn-secondary" href="index.php">Listeye Dön</a>
-          <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
         </div>
       </section>
 
@@ -163,26 +162,46 @@ $statuses = mx_statuses();
         </div>
         <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
         <input type="hidden" name="action" value="details">
-        <div class="panel-edit-grid">
-          <label>Alım bölgesi <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly></label>
-          <label>Teslim bölgesi <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly></label>
-          <label>Alım açık adres <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
-          <label>Teslim açık adres <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
-          <label>Hizmet <input name="service_label" value="<?= mx_h($request['service_label']) ?>" readonly></label>
-          <label>Paket <input name="package_label" value="<?= mx_h($request['package_label']) ?>" readonly></label>
-          <label>Teslim zamanı <input name="delivery_time" value="<?= mx_h($request['delivery_time']) ?>" readonly></label>
-          <label>Ücret <input name="price" value="<?= mx_h($request['price']) ?>" required readonly></label>
-          <label>Mesafe km <input name="distance_km" value="<?= isset($request['distance_km']) ? mx_h($request['distance_km']) : '' ?>" inputmode="decimal" readonly></label>
-          <label>Not <textarea name="note" readonly><?= mx_h($request['note']) ?></textarea></label>
-          <label>Gönderici ad soyad <input name="sender_name" value="<?= mx_h($request['sender_name']) ?>" required readonly></label>
-          <label>Gönderici telefon <input name="sender_phone" value="<?= mx_h($request['sender_phone']) ?>" required readonly></label>
-          <label>Gönderici e-posta <input name="sender_email" value="<?= mx_h($request['sender_email']) ?>" readonly></label>
-          <label>Gönderici TCKN <input name="sender_tckn" value="<?= mx_h($request['sender_tckn']) ?>" maxlength="11" required readonly></label>
-          <label>Alıcı ad soyad <input name="recipient_name" value="<?= mx_h($request['recipient_name']) ?>" required readonly></label>
-          <label>Alıcı telefon <input name="recipient_phone" value="<?= mx_h($request['recipient_phone']) ?>" required readonly></label>
-          <label>Alıcı e-posta <input name="recipient_email" value="<?= mx_h($request['recipient_email']) ?>" readonly></label>
-          <label>Alıcı TCKN <input name="recipient_tckn" value="<?= mx_h($request['recipient_tckn']) ?>" maxlength="11" required readonly></label>
-          <label>Değişiklik notu <textarea name="change_note" placeholder="Adres düzeltildi, telefon güncellendi..." readonly></textarea></label>
+        <div class="panel-edit-sections">
+          <section class="panel-edit-section">
+            <h3>Gönderi</h3>
+            <div class="panel-edit-grid panel-edit-grid-compact">
+              <label>Hizmet <input name="service_label" value="<?= mx_h($request['service_label']) ?>" readonly></label>
+              <label>Paket <input name="package_label" value="<?= mx_h($request['package_label']) ?>" readonly></label>
+              <label>Teslim zamanı <input name="delivery_time" value="<?= mx_h($request['delivery_time']) ?>" readonly></label>
+              <label>Ücret <input name="price" value="<?= mx_h($request['price']) ?>" required readonly></label>
+              <label>Mesafe km <input name="distance_km" value="<?= isset($request['distance_km']) ? mx_h($request['distance_km']) : '' ?>" inputmode="decimal" readonly></label>
+            </div>
+          </section>
+          <section class="panel-edit-section">
+            <h3>Adresler</h3>
+            <div class="panel-edit-grid panel-edit-grid-address">
+              <label>Alım bölgesi <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly></label>
+              <label>Teslim bölgesi <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly></label>
+              <label>Alım açık adres <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
+              <label>Teslim açık adres <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
+            </div>
+          </section>
+          <section class="panel-edit-section">
+            <h3>Taraf Bilgileri</h3>
+            <div class="panel-edit-grid panel-edit-grid-compact">
+              <label>Gönderici ad soyad <input name="sender_name" value="<?= mx_h($request['sender_name']) ?>" required readonly></label>
+              <label>Gönderici telefon <input name="sender_phone" value="<?= mx_h($request['sender_phone']) ?>" required readonly></label>
+              <label>Gönderici e-posta <input name="sender_email" value="<?= mx_h($request['sender_email']) ?>" readonly></label>
+              <label>Gönderici TCKN <input name="sender_tckn" value="<?= mx_h($request['sender_tckn']) ?>" maxlength="11" required readonly></label>
+              <label>Alıcı ad soyad <input name="recipient_name" value="<?= mx_h($request['recipient_name']) ?>" required readonly></label>
+              <label>Alıcı telefon <input name="recipient_phone" value="<?= mx_h($request['recipient_phone']) ?>" required readonly></label>
+              <label>Alıcı e-posta <input name="recipient_email" value="<?= mx_h($request['recipient_email']) ?>" readonly></label>
+              <label>Alıcı TCKN <input name="recipient_tckn" value="<?= mx_h($request['recipient_tckn']) ?>" maxlength="11" required readonly></label>
+            </div>
+          </section>
+          <section class="panel-edit-section">
+            <h3>Notlar</h3>
+            <div class="panel-edit-grid panel-edit-grid-notes">
+              <label>Talep notu <textarea name="note" readonly><?= mx_h($request['note']) ?></textarea></label>
+              <label>Değişiklik notu <textarea name="change_note" placeholder="Adres düzeltildi, telefon güncellendi..." readonly></textarea></label>
+            </div>
+          </section>
         </div>
       </form>
 

@@ -1012,8 +1012,10 @@ h3 {
 }
 
 .panel-filters {
-  grid-template-columns: 150px repeat(7, minmax(130px, 1fr)) auto auto;
+  display: flex !important;
+  flex-wrap: wrap;
   align-items: end;
+  gap: 10px;
   padding: 14px;
   background: #f8fafb;
   border: 1px solid var(--line);
@@ -1029,10 +1031,25 @@ h3 {
   font-weight: 800;
 }
 
+.panel-filters label {
+  flex: 1 1 132px;
+  min-width: 132px;
+}
+
+.panel-filters label:first-child {
+  flex-basis: 130px;
+}
+
+.panel-filters input,
+.panel-filters select {
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
 .panel-filters .btn {
   align-self: end;
-  min-height: 46px;
-  padding-inline: 16px;
+  min-height: 40px;
+  padding: 9px 16px;
 }
 
 .panel-alert {
@@ -1136,6 +1153,13 @@ h3 {
   text-transform: uppercase;
 }
 
+.route-line {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
 .panel-table small,
 .panel-log span {
   color: var(--muted);
@@ -1178,24 +1202,29 @@ h3 {
 }
 
 .wa-icon {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px !important;
+  height: 18px !important;
   margin-left: 6px;
   color: #fff !important;
-  background: #20b15a;
+  background: #20b15a !important;
   border-radius: 50%;
   font-size: 12px;
   font-weight: 900;
   vertical-align: middle;
+  line-height: 1;
 }
 
+.panel-table .wa-icon svg,
 .wa-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  fill: currentColor !important;
 }
 
 .status-update-row {
@@ -1246,6 +1275,40 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 18px;
+}
+
+.panel-edit-sections {
+  display: grid;
+  gap: 14px;
+}
+
+.panel-edit-section {
+  padding: 16px;
+  background: #f8fafb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.panel-edit-section h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+.panel-edit-grid-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+.panel-edit-grid-address,
+.panel-edit-grid-notes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+.panel-edit-form textarea,
+.panel-edit-grid-address textarea,
+.panel-edit-grid-notes textarea {
+  min-height: 76px;
 }
 
 .panel-detail-list {
@@ -1309,11 +1372,15 @@ h3 {
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 12px;
 }
 
 .pricing-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  align-items: center;
+  gap: 12px;
   padding: 14px;
   background: #f8fafb;
   border: 1px solid var(--line);
@@ -1342,6 +1409,31 @@ h3 {
   color: var(--muted);
   font-style: normal;
   font-weight: 900;
+}
+
+.user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-actions form,
+.password-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-inline input {
+  width: 150px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.user-table {
+  min-width: 900px;
 }
 
 .page-hero {
@@ -1622,6 +1714,9 @@ h3 {
   .panel-detail-grid,
   .panel-filters,
   .panel-edit-grid,
+  .panel-edit-grid-compact,
+  .panel-edit-grid-address,
+  .panel-edit-grid-notes,
   .pricing-grid,
   .status-update-row,
   .status-choice-grid,

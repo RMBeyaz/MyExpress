@@ -45,7 +45,7 @@ try {
     }
 
     $stage = 'db-connect';
-    $trackingCode = mx_tracking_code();
+    $trackingCode = 'MXTMP' . strtoupper(bin2hex(random_bytes(5)));
     $priceResult = mx_calculate_price($payload);
     $pdo = mx_pdo();
     $pdo->beginTransaction();
@@ -103,6 +103,12 @@ try {
     ]);
 
     $requestId = (int) $pdo->lastInsertId();
+    $trackingCode = mx_tracking_code_for_id($requestId);
+    $pdo->prepare('UPDATE courier_requests SET tracking_code = :tracking_code WHERE id = :id')->execute([
+        ':tracking_code' => $trackingCode,
+        ':id' => $requestId,
+    ]);
+
     $stage = 'insert-status-log';
     $logStmt = $pdo->prepare(
         'INSERT INTO request_status_logs (request_id, status, note) VALUES (:request_id, :status, :note)'

@@ -36,6 +36,7 @@ $checks = [
         'request_status_logs' => false,
         'request_audit_logs' => false,
         'pricing_settings' => false,
+        'panel_users' => false,
     ],
     'columns' => [
         'courier_requests.distance_km' => false,
