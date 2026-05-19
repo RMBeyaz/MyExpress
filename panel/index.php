@@ -94,6 +94,17 @@ $sortMark = static function (string $key) use ($sortKey, $dirParam): string {
     return $dirParam === 'asc' ? ' ↑' : ' ↓';
 };
 
+$statusUrl = static function (string $status) use ($filters): string {
+    $query = $_GET;
+    if ($status === '') {
+        unset($query['status']);
+    } else {
+        $query['status'] = $status;
+    }
+    $query['view'] = $filters['view'];
+    return 'index.php' . ($query ? '?' . http_build_query($query) : '');
+};
+
 if (mx_panel_is_logged_in()) {
     try {
         $pdo = mx_pdo();
@@ -191,7 +202,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-font-pass">
+    <link rel="stylesheet" href="../styles.css?v=20260519-status-rows">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -243,14 +254,6 @@ if (mx_panel_is_logged_in()) {
                 <?php endforeach; ?>
               </select>
             </label>
-            <label>Durum
-              <select name="status">
-                <option value="">Tümü</option>
-                <?php foreach ($statuses as $key => $label): ?>
-                  <option value="<?= mx_h($key) ?>" <?= ($_GET['status'] ?? '') === $key ? 'selected' : '' ?>><?= mx_h($label) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </label>
             <label>Başlangıç <input type="date" name="date_from" value="<?= mx_h($filters['date_from']) ?>"></label>
             <label>Bitiş <input type="date" name="date_to" value="<?= mx_h($filters['date_to']) ?>"></label>
             <label>Talep no <input name="tracking" value="<?= mx_h($filters['tracking']) ?>" placeholder="MX..."></label>
@@ -267,12 +270,17 @@ if (mx_panel_is_logged_in()) {
           <?php if ($panelError !== ''): ?>
             <p class="panel-alert"><?= mx_h($panelError) ?></p>
           <?php endif; ?>
+          <div class="status-filter-bar" aria-label="Duruma göre filtrele">
+            <a class="status-filter status-filter-all <?= $filters['status'] === '' ? 'is-active' : '' ?>" href="<?= mx_h($statusUrl('')) ?>">Hepsi</a>
+            <?php foreach ($statuses as $key => $label): ?>
+              <a class="status-filter panel-status-<?= mx_h($key) ?> <?= $filters['status'] === $key ? 'is-active' : '' ?>" href="<?= mx_h($statusUrl($key)) ?>"><?= mx_h($label) ?></a>
+            <?php endforeach; ?>
+          </div>
           <div class="panel-table-wrap">
             <table class="panel-table">
               <thead>
                 <tr>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('tracking')) ?>">Talep<?= mx_h($sortMark('tracking')) ?></a></th>
-                  <th><a class="sort-link" href="<?= mx_h($sortUrl('status')) ?>">Durum<?= mx_h($sortMark('status')) ?></a></th>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('sender')) ?>">Gönderici<?= mx_h($sortMark('sender')) ?></a></th>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('recipient')) ?>">Alıcı<?= mx_h($sortMark('recipient')) ?></a></th>
                   <th>Adres</th>
@@ -284,20 +292,19 @@ if (mx_panel_is_logged_in()) {
               </thead>
               <tbody>
                 <?php foreach ($requests as $request): ?>
-                  <tr>
+                  <tr class="request-row request-row-<?= mx_h($request['status']) ?>">
                     <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
-                    <td><span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span></td>
                     <td><span class="person-name"><?= mx_h($request['sender_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['sender_phone'])) ?>" target="_blank" rel="noopener" aria-label="Gönderici WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['sender_phone']) ?>"><small><?= mx_h($request['sender_phone']) ?></small></a></td>
                     <td><span class="person-name"><?= mx_h($request['recipient_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['recipient_phone'])) ?>" target="_blank" rel="noopener" aria-label="Alıcı WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><small><?= mx_h($request['recipient_phone']) ?></small></a></td>
                     <td><span class="route-line"><span class="route-label">Alım</span> <?= mx_h($request['pickup']) ?></span><span class="route-line"><span class="route-label">Teslim</span> <?= mx_h($request['dropoff']) ?></span></td>
                     <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
                     <td><?= mx_h($request['price']) ?></td>
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
-                    <td><button class="panel-icon-btn danger" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>">Sil</button></td>
+                    <td><button class="panel-icon-btn danger trash-action" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>" aria-label="Talebi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button></td>
                   </tr>
                 <?php endforeach; ?>
                 <?php if (!$requests): ?>
-                  <tr><td colspan="9">Henüz talep yok.</td></tr>
+                  <tr><td colspan="8">Henüz talep yok.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>
