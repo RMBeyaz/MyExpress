@@ -126,7 +126,7 @@ $statuses = mx_statuses();
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
     <link rel="stylesheet" href="../styles.css">
   </head>
-  <body class="panel-body">
+  <body class="panel-body request-detail-page">
     <main class="panel-shell">
       <section class="panel-header">
         <div>
