@@ -21,7 +21,6 @@ try {
         'senderTckn' => 'Gonderici T.C. kimlik no',
         'recipientName' => 'Alici ad soyad',
         'recipientPhone' => 'Alici telefon',
-        'recipientTckn' => 'Alici T.C. kimlik no',
         'service' => 'Hizmet tipi',
         'packageType' => 'Paket tipi',
         'price' => 'Gonderi ucreti',
@@ -38,10 +37,14 @@ try {
     }
 
     $senderTckn = preg_replace('/\D/', '', (string) $payload['senderTckn']);
-    $recipientTckn = preg_replace('/\D/', '', (string) $payload['recipientTckn']);
+    $recipientTckn = preg_replace('/\D/', '', (string) ($payload['recipientTckn'] ?? ''));
 
-    if (!mx_valid_tckn($senderTckn) || !mx_valid_tckn($recipientTckn)) {
-        mx_json(['ok' => false, 'message' => 'Gecerli T.C. kimlik numarasi girin.'], 422);
+    if (!mx_valid_tckn($senderTckn)) {
+        mx_json(['ok' => false, 'message' => 'Gecerli gonderici T.C. kimlik numarasi girin.'], 422);
+    }
+
+    if ($recipientTckn !== '' && !mx_valid_tckn($recipientTckn)) {
+        mx_json(['ok' => false, 'message' => 'Alici T.C. kimlik numarasi girildiyse gecerli olmali.'], 422);
     }
 
     $stage = 'db-connect';

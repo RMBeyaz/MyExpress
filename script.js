@@ -575,7 +575,9 @@ detailForm?.addEventListener('submit', (event) => {
   const pickup = detailForm.elements.pickup;
   const dropoff = detailForm.elements.dropoff;
   const invalidTckn = [...detailForm.querySelectorAll('[data-tckn]')]
-    .find((input) => !isValidTckn(input.value.trim()));
+    .find((input) => input.hasAttribute('required')
+      ? !isValidTckn(input.value.trim())
+      : input.value.trim() !== '' && !isValidTckn(input.value.trim()));
 
   if (!selectedLocationForInput(pickup) || !selectedLocationForInput(dropoff)) {
     button.textContent = 'Mahalleleri listeden seçin';
@@ -654,9 +656,13 @@ detailForm?.querySelectorAll('textarea').forEach((textarea) => {
 detailForm?.querySelectorAll('[data-tckn]').forEach((input) => {
   input.addEventListener('input', () => {
     input.value = input.value.replace(/\D/g, '').slice(0, 11);
-    setFieldError(input, isValidTckn(input.value.trim()) ? '' : 'Geçerli bir T.C. kimlik numarası girin.');
+    const value = input.value.trim();
+    const isRequired = input.hasAttribute('required');
+    setFieldError(input, (!isRequired && value === '') || isValidTckn(value) ? '' : 'Geçerli bir T.C. kimlik numarası girin.');
   });
   input.addEventListener('blur', () => {
-    setFieldError(input, isValidTckn(input.value.trim()) ? '' : 'Geçerli bir T.C. kimlik numarası girin.');
+    const value = input.value.trim();
+    const isRequired = input.hasAttribute('required');
+    setFieldError(input, (!isRequired && value === '') || isValidTckn(value) ? '' : 'Geçerli bir T.C. kimlik numarası girin.');
   });
 });
