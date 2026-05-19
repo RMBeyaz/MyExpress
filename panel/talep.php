@@ -54,11 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id > 0 && $action === 'details') {
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
         $setDistance = $hasDistance ? ', distance_km = :distance_km' : '';
+        $pricing = mx_pricing_settings();
+        $service = mx_clean_string($_POST['service'] ?? 'normal', 40);
+        $packageType = mx_clean_string($_POST['package_type'] ?? 'evrak', 40);
+        $serviceLabel = $pricing['services'][$service]['label'] ?? $service;
+        $packageLabel = $pricing['packages'][$packageType]['label'] ?? $packageType;
         $stmt = $pdo->prepare(
             "UPDATE courier_requests SET
-                pickup = :pickup, pickup_street = :pickup_street,
-                dropoff = :dropoff, dropoff_street = :dropoff_street,
-                service_label = :service_label, package_label = :package_label,
+                pickup = :pickup, pickup_lat = :pickup_lat, pickup_lng = :pickup_lng, pickup_street = :pickup_street,
+                dropoff = :dropoff, dropoff_lat = :dropoff_lat, dropoff_lng = :dropoff_lng, dropoff_street = :dropoff_street,
+                service = :service, service_label = :service_label, package_type = :package_type, package_label = :package_label,
                 delivery_time = :delivery_time, note = :note, price = :price{$setDistance},
                 sender_name = :sender_name, sender_phone = :sender_phone, sender_email = :sender_email, sender_tckn = :sender_tckn,
                 recipient_name = :recipient_name, recipient_phone = :recipient_phone, recipient_email = :recipient_email, recipient_tckn = :recipient_tckn
@@ -66,11 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $params = [
             ':pickup' => mx_clean_string($_POST['pickup'] ?? '', 255),
+            ':pickup_lat' => is_numeric($_POST['pickup_lat'] ?? null) ? (float) $_POST['pickup_lat'] : null,
+            ':pickup_lng' => is_numeric($_POST['pickup_lng'] ?? null) ? (float) $_POST['pickup_lng'] : null,
             ':pickup_street' => mx_clean_text($_POST['pickup_street'] ?? '', 1000),
             ':dropoff' => mx_clean_string($_POST['dropoff'] ?? '', 255),
+            ':dropoff_lat' => is_numeric($_POST['dropoff_lat'] ?? null) ? (float) $_POST['dropoff_lat'] : null,
+            ':dropoff_lng' => is_numeric($_POST['dropoff_lng'] ?? null) ? (float) $_POST['dropoff_lng'] : null,
             ':dropoff_street' => mx_clean_text($_POST['dropoff_street'] ?? '', 1000),
-            ':service_label' => mx_clean_string($_POST['service_label'] ?? '', 80),
-            ':package_label' => mx_clean_string($_POST['package_label'] ?? '', 80),
+            ':service' => $service,
+            ':service_label' => mx_clean_string($serviceLabel, 80),
+            ':package_type' => $packageType,
+            ':package_label' => mx_clean_string($packageLabel, 80),
             ':delivery_time' => mx_clean_string($_POST['delivery_time'] ?? '', 80),
             ':note' => mx_clean_text($_POST['note'] ?? '', 1000),
             ':price' => mx_clean_string($_POST['price'] ?? '', 40),
@@ -117,6 +128,19 @@ if (mx_table_exists('request_audit_logs')) {
 }
 
 $statuses = mx_statuses();
+$pricing = mx_pricing_settings();
+$serviceOptions = $pricing['services'];
+$packageOptions = array_intersect_key($pricing['packages'], array_flip(['evrak', 'kucuk', 'orta', 'buyuk', 'motorDisi']));
+if (!isset($serviceOptions[$request['service']])) {
+    $serviceOptions[$request['service']] = ['label' => $request['service_label'], 'base' => 0, 'km' => 0, 'multiplier' => 1];
+}
+if (!isset($packageOptions[$request['package_type']])) {
+    $packageOptions[$request['package_type']] = ['label' => $request['package_label'], 'fee' => 0];
+}
+$deliveryOptions = ['En kısa sürede', 'Bugün içinde', 'Belirli saat aralığı', 'İleri tarihli teslimat', 'Gece teslimat'];
+if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $deliveryOptions, true)) {
+    $deliveryOptions[] = $request['delivery_time'];
+}
 ?>
 <!doctype html>
 <html lang="tr">
@@ -124,7 +148,7 @@ $statuses = mx_statuses();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-request-flow-v2">
+    <link rel="stylesheet" href="../styles.css?v=20260519-detail-controls-v1">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -182,15 +206,40 @@ $statuses = mx_statuses();
         </div>
         <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
         <input type="hidden" name="action" value="details">
+        <input type="hidden" name="pickup_lat" value="<?= mx_h($request['pickup_lat']) ?>" data-pickup-lat>
+        <input type="hidden" name="pickup_lng" value="<?= mx_h($request['pickup_lng']) ?>" data-pickup-lng>
+        <input type="hidden" name="dropoff_lat" value="<?= mx_h($request['dropoff_lat']) ?>" data-dropoff-lat>
+        <input type="hidden" name="dropoff_lng" value="<?= mx_h($request['dropoff_lng']) ?>" data-dropoff-lng>
         <div class="panel-edit-sections">
           <section class="panel-edit-section">
             <h3>Gönderi</h3>
             <div class="panel-edit-grid panel-edit-grid-compact">
-              <label>Hizmet <input name="service_label" value="<?= mx_h($request['service_label']) ?>" readonly></label>
-              <label>Paket <input name="package_label" value="<?= mx_h($request['package_label']) ?>" readonly></label>
-              <label>Teslim zamanı <input name="delivery_time" value="<?= mx_h($request['delivery_time']) ?>" readonly></label>
-              <label>Ücret <input name="price" value="<?= mx_h($request['price']) ?>" required readonly></label>
-              <label>Mesafe km <input name="distance_km" value="<?= isset($request['distance_km']) ? mx_h($request['distance_km']) : '' ?>" inputmode="decimal" readonly></label>
+              <label>Hizmet
+                <select name="service" disabled data-priced-field>
+                  <?php foreach ($serviceOptions as $key => $service): ?>
+                    <option value="<?= mx_h($key) ?>" <?= $request['service'] === $key ? 'selected' : '' ?>><?= mx_h($service['label'] ?? $key) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>Paket
+                <select name="package_type" disabled data-priced-field>
+                  <?php foreach ($packageOptions as $key => $package): ?>
+                    <option value="<?= mx_h($key) ?>" <?= $request['package_type'] === $key ? 'selected' : '' ?>><?= mx_h($package['label'] ?? $key) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>Teslim zamanı
+                <select name="delivery_time" disabled>
+                  <?php foreach ($deliveryOptions as $option): ?>
+                    <option value="<?= mx_h($option) ?>" <?= $request['delivery_time'] === $option ? 'selected' : '' ?>><?= mx_h($option) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>Mesafe km <input name="distance_km" value="<?= isset($request['distance_km']) ? mx_h($request['distance_km']) : '' ?>" inputmode="decimal" readonly data-distance-input></label>
+              <label>Ücret <input name="price" value="<?= mx_h($request['price']) ?>" required readonly data-price-input></label>
+              <div class="panel-inline-actions">
+                <button class="btn btn-secondary" type="button" data-distance-calculate disabled>KM Hesapla</button>
+              </div>
             </div>
           </section>
           <section class="panel-edit-section">
@@ -212,7 +261,7 @@ $statuses = mx_statuses();
               <label>Alıcı ad soyad <input name="recipient_name" value="<?= mx_h($request['recipient_name']) ?>" required readonly></label>
               <label>Alıcı telefon <input name="recipient_phone" value="<?= mx_h($request['recipient_phone']) ?>" required readonly></label>
               <label>Alıcı e-posta <input name="recipient_email" value="<?= mx_h($request['recipient_email']) ?>" readonly></label>
-              <label>Alıcı TCKN <input name="recipient_tckn" value="<?= mx_h($request['recipient_tckn']) ?>" maxlength="11" required readonly></label>
+              <label>Alıcı TCKN <input name="recipient_tckn" value="<?= mx_h($request['recipient_tckn']) ?>" maxlength="11" readonly></label>
             </div>
           </section>
           <section class="panel-edit-section">
@@ -252,16 +301,127 @@ $statuses = mx_statuses();
       </form>
     </div>
     <script>
+      const pricingConfig = <?= json_encode($pricing, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
       const editForm = document.querySelector('[data-panel-edit-form]');
       const editToggle = document.querySelector('[data-edit-toggle]');
       const saveButton = document.querySelector('[data-save-edit]');
       const deleteModal = document.querySelector('[data-delete-modal]');
+      const distanceButton = document.querySelector('[data-distance-calculate]');
+      const distanceInput = document.querySelector('[data-distance-input]');
+      const priceInput = document.querySelector('[data-price-input]');
+      const pickupInput = editForm?.elements.pickup;
+      const dropoffInput = editForm?.elements.dropoff;
+      const pickupLat = document.querySelector('[data-pickup-lat]');
+      const pickupLng = document.querySelector('[data-pickup-lng]');
+      const dropoffLat = document.querySelector('[data-dropoff-lat]');
+      const dropoffLng = document.querySelector('[data-dropoff-lng]');
+
+      const earthDistance = (from, to) => {
+        const radius = 6371;
+        const latDelta = (to.lat - from.lat) * Math.PI / 180;
+        const lngDelta = (to.lng - from.lng) * Math.PI / 180;
+        const a = Math.sin(latDelta / 2) ** 2
+          + Math.cos(from.lat * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180)
+          * Math.sin(lngDelta / 2) ** 2;
+        return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      };
+
+      const roundPrice = (value) => {
+        const roundTo = Number(pricingConfig.rules?.roundTo || 10);
+        return `${Math.round(value / roundTo) * roundTo} TL`;
+      };
+
+      const formatDecimal = (value) => String(Math.round(value * 100) / 100).replace('.', ',');
+
+      const parseDecimal = (value) => Number(String(value || '').replace(',', '.')) || 0;
+
+      const priceForDistance = () => {
+        const serviceKey = editForm?.elements.service?.value || 'normal';
+        const packageKey = editForm?.elements.package_type?.value || 'evrak';
+        const service = pricingConfig.services?.[serviceKey] || pricingConfig.services?.normal || {};
+        const packageItem = pricingConfig.packages?.[packageKey] || {};
+        const km = parseDecimal(distanceInput?.value);
+        const pickupLngValue = Number(pickupLng?.value);
+        const dropoffLngValue = Number(dropoffLng?.value);
+        const bridgeFee = Number.isFinite(pickupLngValue) && Number.isFinite(dropoffLngValue)
+          && ((pickupLngValue < 29 && dropoffLngValue >= 29) || (pickupLngValue >= 29 && dropoffLngValue < 29))
+          ? Number(pricingConfig.rules?.bridgeFee || 0)
+          : 0;
+        const total = (Number(service.base || 0) + km * Number(service.km || 0) + Number(packageItem.fee || 0) + bridgeFee)
+          * Number(service.multiplier || 1);
+        return roundPrice(total);
+      };
+
+      const updateSuggestedPrice = (ask = false) => {
+        if (!priceInput || !distanceInput?.value) return;
+        const suggested = priceForDistance();
+        if (!ask || window.confirm(`Fiyat ${suggested} olacak şekilde güncellensin mi?`)) {
+          priceInput.value = suggested;
+        }
+      };
+
+      const geocodePanelAddress = async (query) => {
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('format', 'jsonv2');
+        url.searchParams.set('limit', '1');
+        url.searchParams.set('countrycodes', 'tr');
+        url.searchParams.set('accept-language', 'tr');
+        url.searchParams.set('viewbox', '28.01,41.65,29.95,40.72');
+        url.searchParams.set('bounded', '1');
+        url.searchParams.set('q', `${query}, İstanbul`);
+        const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+        const results = response.ok ? await response.json() : [];
+        if (!results.length) throw new Error('Adres koordinatı bulunamadı.');
+        return { lat: Number(results[0].lat), lng: Number(results[0].lon) };
+      };
+
+      const calculatePanelDistance = async () => {
+        if (!pickupInput?.value || !dropoffInput?.value || !distanceInput) return;
+        const originalText = distanceButton?.textContent || 'KM Hesapla';
+        if (distanceButton) {
+          distanceButton.disabled = true;
+          distanceButton.textContent = 'Hesaplanıyor...';
+        }
+        try {
+          const [pickupLocation, dropoffLocation] = await Promise.all([
+            geocodePanelAddress(pickupInput.value),
+            geocodePanelAddress(dropoffInput.value),
+          ]);
+          const raw = earthDistance(pickupLocation, dropoffLocation);
+          const sameArea = pickupInput.value.trim() === dropoffInput.value.trim();
+          const minKm = sameArea ? Number(pricingConfig.rules?.minSameAreaKm || 4) : Number(pricingConfig.rules?.minDefaultKm || 7);
+          const billable = Math.max(raw * Number(pricingConfig.rules?.routeMultiplier || 1.28), minKm);
+          pickupLat.value = pickupLocation.lat.toFixed(7);
+          pickupLng.value = pickupLocation.lng.toFixed(7);
+          dropoffLat.value = dropoffLocation.lat.toFixed(7);
+          dropoffLng.value = dropoffLocation.lng.toFixed(7);
+          distanceInput.value = formatDecimal(billable);
+          updateSuggestedPrice(true);
+        } catch (error) {
+          window.alert(error.message || 'KM hesaplanamadı.');
+        } finally {
+          if (distanceButton) {
+            distanceButton.disabled = false;
+            distanceButton.textContent = originalText;
+          }
+        }
+      };
+
       editToggle?.addEventListener('click', () => {
         editForm?.classList.remove('is-readonly');
         editForm?.querySelectorAll('input[readonly], textarea[readonly]').forEach((field) => field.removeAttribute('readonly'));
+        editForm?.querySelectorAll('select[disabled], button[disabled]').forEach((field) => field.removeAttribute('disabled'));
         editToggle.hidden = true;
         if (saveButton) saveButton.hidden = false;
       });
+      editForm?.addEventListener('submit', () => {
+        editForm.querySelectorAll('select[disabled], button[disabled]').forEach((field) => field.removeAttribute('disabled'));
+      });
+      distanceInput?.addEventListener('change', () => updateSuggestedPrice(false));
+      editForm?.querySelectorAll('[data-priced-field]').forEach((field) => {
+        field.addEventListener('change', () => updateSuggestedPrice(false));
+      });
+      distanceButton?.addEventListener('click', calculatePanelDistance);
       document.querySelector('[data-delete-open]')?.addEventListener('click', () => {
         deleteModal.hidden = false;
       });

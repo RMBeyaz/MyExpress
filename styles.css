@@ -2114,7 +2114,7 @@ h3 {
 
 .panel-body .panel-filters {
   display: grid !important;
-  grid-template-columns: 128px 120px 136px 136px 150px 1fr 1fr 132px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
   margin: 0 auto 16px;
@@ -2134,9 +2134,19 @@ h3 {
 .panel-body .panel-filters input,
 .panel-body .panel-filters select,
 .panel-body .panel-filters .btn {
+  width: 100%;
   min-height: 36px;
   padding-block: 7px;
   font-size: 13px;
+}
+
+.panel-body .panel-filters select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #687684 50%), linear-gradient(135deg, #687684 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 26px;
 }
 
 .panel-body .panel-filters .btn {
@@ -2380,7 +2390,8 @@ h3 {
 }
 
 .panel-body .panel-edit-form input,
-.panel-body .panel-edit-form textarea {
+.panel-body .panel-edit-form textarea,
+.panel-body .panel-edit-form select {
   min-height: 36px;
   padding: 7px 9px;
   font-size: 13px;
@@ -2388,6 +2399,26 @@ h3 {
 
 .panel-body .panel-edit-form textarea {
   min-height: 58px;
+}
+
+.panel-body .panel-edit-form select {
+  width: 100%;
+  border: 1px solid #cfd7dd;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--navy);
+  font: inherit;
+}
+
+.panel-body .panel-edit-form.is-readonly select:disabled {
+  color: #53616e;
+  background: #eef2f4;
+  opacity: 1;
+}
+
+.panel-body .panel-inline-actions {
+  display: flex;
+  align-items: end;
 }
 
 .panel-body .pricing-panel {
