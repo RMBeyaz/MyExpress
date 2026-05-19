@@ -148,7 +148,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-whatsapp-contact">
+    <link rel="stylesheet" href="../styles.css?v=20260520-request-page-links">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">

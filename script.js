@@ -303,6 +303,7 @@ const updateDetailEstimate = () => {
   const target = detailPriceEstimate.querySelector('strong');
 
   if (!pickup || !dropoff) {
+    detailPriceEstimate.hidden = true;
     target.textContent = 'Mahalleleri seçince hesaplanır';
     if (requestSummary?.querySelector('[data-summary-price]')) {
       requestSummary.querySelector('[data-summary-price]').textContent = 'Mahalleleri seçince hesaplanır';
@@ -310,6 +311,7 @@ const updateDetailEstimate = () => {
     return;
   }
 
+  detailPriceEstimate.hidden = false;
   const serviceValue = detailForm.elements.service.value;
   const packageValue = detailForm.elements.packageType.value;
   const estimate = calculateEstimate(pickup, dropoff, serviceValue, packageValue);
