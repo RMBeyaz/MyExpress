@@ -8,6 +8,7 @@ const requestSummary = document.querySelector('[data-request-summary]');
 const detailForm = document.querySelector('[data-detail-form]');
 const scheduleFields = document.querySelector('[data-schedule-fields]');
 const scheduleDateField = document.querySelector('[data-schedule-date]');
+const scheduleTimeFields = document.querySelectorAll('[data-schedule-time]');
 const addressSearchTimers = new WeakMap();
 
 const istanbulDistricts = [
@@ -220,23 +221,29 @@ const updateScheduleFields = () => {
   if (!detailForm || !scheduleFields) return;
 
   const value = detailForm.elements.deliveryTime?.value || '';
-  const requiresTime = value === 'Belirli saat aralığı' || value === 'İleri tarihli teslimat';
+  const requiresTime = value === 'Belirli saat aralığı';
   const requiresDate = value === 'İleri tarihli teslimat';
+  const hasScheduleChoice = requiresTime || requiresDate;
   const dateInput = detailForm.elements.deliveryDate;
   const startInput = detailForm.elements.deliveryStartTime;
   const endInput = detailForm.elements.deliveryEndTime;
 
-  scheduleFields.hidden = !requiresTime;
+  scheduleFields.hidden = !hasScheduleChoice;
   if (scheduleDateField) scheduleDateField.hidden = !requiresDate;
+  scheduleTimeFields.forEach((field) => {
+    field.hidden = !requiresTime;
+  });
 
   if (dateInput) {
     dateInput.required = requiresDate;
+    dateInput.disabled = !requiresDate;
     dateInput.min = new Date().toISOString().slice(0, 10);
     if (!requiresDate) dateInput.value = '';
   }
   [startInput, endInput].forEach((input) => {
     if (!input) return;
     input.required = requiresTime;
+    input.disabled = !requiresTime;
     if (!requiresTime) input.value = '';
   });
 };
@@ -623,8 +630,7 @@ detailForm?.addEventListener('submit', (event) => {
   const deliveryTime = detailForm.elements.deliveryTime?.value || '';
   const startTime = detailForm.elements.deliveryStartTime;
   const endTime = detailForm.elements.deliveryEndTime;
-  if ((deliveryTime === 'Belirli saat aralığı' || deliveryTime === 'İleri tarihli teslimat')
-    && startTime?.value && endTime?.value && startTime.value >= endTime.value) {
+  if (deliveryTime === 'Belirli saat aralığı' && startTime?.value && endTime?.value && startTime.value >= endTime.value) {
     setFieldError(endTime, 'Bitiş saati başlangıçtan sonra olmalı.');
     endTime.reportValidity();
     return;
