@@ -17,6 +17,7 @@ deployment:
     - /bin/cp nasil-calisir.html $DEPLOYPATH
     - /bin/cp talep.html $DEPLOYPATH
     - /bin/cp talep-basarili.html $DEPLOYPATH
+    - /bin/cp takip.html $DEPLOYPATH
     - /bin/cp robots.txt $DEPLOYPATH
     - /bin/cp sitemap.xml $DEPLOYPATH
     - /bin/cp script.js $DEPLOYPATH

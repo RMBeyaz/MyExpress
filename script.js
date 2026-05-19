@@ -714,3 +714,142 @@ detailForm?.querySelectorAll('[data-tckn]').forEach((input) => {
     setFieldError(input, (!isRequired && value === '') || isValidTckn(value) ? '' : 'Geçerli bir T.C. kimlik numarası girin.');
   });
 });
+
+const trackingForm = document.querySelector('[data-tracking-form]');
+const trackingResult = document.querySelector('[data-tracking-result]');
+const trackingMessage = document.querySelector('[data-tracking-message]');
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+const formatTrackingDate = (value) => {
+  if (!value) return '-';
+  const normalized = String(value).replace(' ', 'T');
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const showTrackingMessage = (message, type = 'error') => {
+  if (!trackingMessage) return;
+  trackingMessage.hidden = false;
+  trackingMessage.className = `tracking-message tracking-message-${type}`;
+  trackingMessage.textContent = message;
+};
+
+const hideTrackingMessage = () => {
+  if (!trackingMessage) return;
+  trackingMessage.hidden = true;
+  trackingMessage.textContent = '';
+};
+
+const renderTrackingResult = (data) => {
+  if (!trackingResult) return;
+  const request = data.request;
+  const timeline = Array.isArray(data.timeline) ? data.timeline : [];
+  const rows = [
+    ['Durum', request.status_label],
+    ['Alım', request.pickup],
+    ['Teslim', request.dropoff],
+    ['Hizmet', request.service_label],
+    ['Paket', request.package_label],
+    ['Teslimat tercihi', request.delivery_time],
+    ['Mesafe', request.distance_km ? `${request.distance_km} km` : '-'],
+    ['Ücret', request.price || '-'],
+    ['Oluşturma', formatTrackingDate(request.created_at)],
+  ];
+
+  trackingResult.hidden = false;
+  trackingResult.innerHTML = `
+    <div class="tracking-card tracking-card-main">
+      <div>
+        <p class="eyebrow">Güncel durum</p>
+        <h2>${escapeHtml(request.status_label)}</h2>
+        <p class="tracking-code">${escapeHtml(request.tracking_code)}</p>
+      </div>
+      <span class="panel-status panel-status-${escapeHtml(request.status)}">${escapeHtml(request.status_label)}</span>
+    </div>
+    <div class="tracking-grid">
+      ${rows.map(([label, value]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value || '-')}</strong>
+        </article>
+      `).join('')}
+    </div>
+    <div class="tracking-card">
+      <div class="tracking-card-heading">
+        <h2>İşlem Geçmişi</h2>
+        <span>${timeline.length} kayıt</span>
+      </div>
+      <div class="tracking-timeline">
+        ${timeline.length ? timeline.map((item) => `
+          <article>
+            <span class="tracking-dot"></span>
+            <div>
+              <strong>${escapeHtml(item.label)}</strong>
+              ${item.note ? `<p>${escapeHtml(item.note)}</p>` : ''}
+              <time>${escapeHtml(formatTrackingDate(item.created_at))}</time>
+            </div>
+          </article>
+        `).join('') : '<p class="tracking-empty">Henüz işlem geçmişi bulunmuyor.</p>'}
+      </div>
+    </div>
+  `;
+};
+
+trackingForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  hideTrackingMessage();
+  if (trackingResult) trackingResult.hidden = true;
+
+  const input = trackingForm.elements.trackingCode;
+  const trackingCode = input.value.trim().toUpperCase();
+  if (!trackingCode) {
+    showTrackingMessage('Talep numarasını girin.');
+    input.focus();
+    return;
+  }
+
+  const button = trackingForm.querySelector('button[type="submit"]');
+  const defaultText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Sorgulanıyor...';
+
+  try {
+    const response = await fetch('api/talep-takip.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ trackingCode }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || 'Talep bilgisi alınamadı.');
+    }
+    renderTrackingResult(data);
+    window.history.replaceState(null, '', `takip.html?no=${encodeURIComponent(trackingCode)}`);
+  } catch (error) {
+    showTrackingMessage(error.message || 'Talep bilgisi alınamadı.');
+  } finally {
+    button.disabled = false;
+    button.textContent = defaultText;
+  }
+});
+
+if (trackingForm) {
+  const codeFromUrl = new URLSearchParams(window.location.search).get('no');
+  if (codeFromUrl) {
+    trackingForm.elements.trackingCode.value = codeFromUrl;
+    trackingForm.requestSubmit();
+  }
+}
