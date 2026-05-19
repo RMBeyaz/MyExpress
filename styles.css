@@ -2103,15 +2103,15 @@ h3 {
 
 .panel-body .panel-filters {
   display: grid !important;
-  grid-template-columns: 120px 132px 132px 142px 150px 150px 130px minmax(180px, 1fr) auto auto;
-  gap: 8px;
+  grid-template-columns: 120px 136px 136px 150px 1fr 1fr 140px;
+  gap: 10px;
   align-items: end;
   margin: 0 auto 16px;
   padding: 12px;
   background: #f8fafb;
   border: 1px solid #dde4e9;
   border-radius: 8px;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .panel-body .panel-filters label {
@@ -2131,6 +2131,22 @@ h3 {
 .panel-body .panel-filters .btn {
   white-space: nowrap;
   padding-inline: 14px;
+}
+
+.panel-body .panel-filters .filter-pickup {
+  grid-column: 1 / span 3;
+}
+
+.panel-body .panel-filters .filter-dropoff {
+  grid-column: 4 / span 3;
+}
+
+.panel-body .panel-filters .filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  justify-content: flex-end;
+  grid-column: 7;
 }
 
 .panel-body .panel-table-wrap {
@@ -2554,11 +2570,31 @@ h3 {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 
+  .panel-body .panel-filters .filter-pickup,
+  .panel-body .panel-filters .filter-dropoff,
+  .panel-body .panel-filters .filter-actions {
+    grid-column: auto;
+  }
+
+  .panel-body .panel-filters .filter-actions {
+    justify-content: flex-start;
+  }
+
   .panel-body .panel-detail-grid,
   .panel-body .panel-edit-sections,
   .success-next,
   .panel-body .pricing-grid,
   .panel-body .user-create-card .panel-edit-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel-body .panel-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-body .panel-filters .filter-actions {
+    flex-wrap: wrap;
   }
 }

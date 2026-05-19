@@ -65,7 +65,8 @@ $filters = [
     'sender' => mx_clean_string($_GET['sender'] ?? '', 80),
     'recipient' => mx_clean_string($_GET['recipient'] ?? '', 80),
     'phone' => mx_clean_string($_GET['phone'] ?? '', 40),
-    'address' => mx_clean_string($_GET['address'] ?? '', 100),
+    'pickup_address' => mx_clean_string($_GET['pickup_address'] ?? '', 100),
+    'dropoff_address' => mx_clean_string($_GET['dropoff_address'] ?? '', 100),
 ];
 $sortKey = $_GET['sort'] ?? 'date';
 $dirParam = strtolower((string) ($_GET['dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
@@ -130,9 +131,13 @@ if (mx_panel_is_logged_in()) {
             $where[] = '(sender_phone LIKE :phone OR recipient_phone LIKE :phone)';
             $params[':phone'] = '%' . $filters['phone'] . '%';
         }
-        if ($filters['address'] !== '') {
-            $where[] = '(pickup LIKE :address OR dropoff LIKE :address OR pickup_street LIKE :address OR dropoff_street LIKE :address)';
-            $params[':address'] = '%' . $filters['address'] . '%';
+        if ($filters['pickup_address'] !== '') {
+            $where[] = '(pickup LIKE :pickup_address OR pickup_street LIKE :pickup_address)';
+            $params[':pickup_address'] = '%' . $filters['pickup_address'] . '%';
+        }
+        if ($filters['dropoff_address'] !== '') {
+            $where[] = '(dropoff LIKE :dropoff_address OR dropoff_street LIKE :dropoff_address)';
+            $params[':dropoff_address'] = '%' . $filters['dropoff_address'] . '%';
         }
 
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
@@ -157,7 +162,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-panel-stable">
+    <link rel="stylesheet" href="../styles.css?v=20260519-filters-v2">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -216,9 +221,12 @@ if (mx_panel_is_logged_in()) {
             <label>Gönderici <input name="sender" value="<?= mx_h($filters['sender']) ?>" placeholder="Ad soyad"></label>
             <label>Alıcı <input name="recipient" value="<?= mx_h($filters['recipient']) ?>" placeholder="Ad soyad"></label>
             <label>Telefon <input name="phone" value="<?= mx_h($filters['phone']) ?>" placeholder="05..."></label>
-            <label>Adres <input name="address" value="<?= mx_h($filters['address']) ?>" placeholder="Mahalle, sokak"></label>
-            <button class="btn btn-primary" type="submit">Filtrele</button>
-            <a class="btn btn-secondary" href="index.php">Temizle</a>
+            <label class="filter-pickup">Alım adresi <input name="pickup_address" value="<?= mx_h($filters['pickup_address']) ?>" placeholder="Alım mahalle, sokak"></label>
+            <label class="filter-dropoff">Teslim adresi <input name="dropoff_address" value="<?= mx_h($filters['dropoff_address']) ?>" placeholder="Teslim mahalle, sokak"></label>
+            <div class="filter-actions">
+              <button class="btn btn-primary" type="submit">Filtrele</button>
+              <a class="btn btn-secondary" href="index.php">Temizle</a>
+            </div>
           </form>
           <?php if ($panelError !== ''): ?>
             <p class="panel-alert"><?= mx_h($panelError) ?></p>
