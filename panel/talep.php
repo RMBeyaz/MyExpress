@@ -124,7 +124,7 @@ $statuses = mx_statuses();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-users-filter-fix">
+    <link rel="stylesheet" href="../styles.css?v=20260519-request-flow-v2">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">

@@ -47,6 +47,32 @@ try {
         mx_json(['ok' => false, 'message' => 'Alici T.C. kimlik numarasi girildiyse gecerli olmali.'], 422);
     }
 
+    $deliveryTime = mx_clean_string($payload['deliveryTime'] ?? '', 80);
+    $deliveryDate = mx_clean_string($payload['deliveryDate'] ?? '', 10);
+    $deliveryStartTime = mx_clean_string($payload['deliveryStartTime'] ?? '', 5);
+    $deliveryEndTime = mx_clean_string($payload['deliveryEndTime'] ?? '', 5);
+
+    if (in_array($deliveryTime, ['Belirli saat aralığı', 'İleri tarihli teslimat'], true)) {
+        if (!preg_match('/^\d{2}:\d{2}$/', $deliveryStartTime) || !preg_match('/^\d{2}:\d{2}$/', $deliveryEndTime)) {
+            mx_json(['ok' => false, 'message' => 'Teslimat saat araligi zorunludur.'], 422);
+        }
+        if ($deliveryStartTime >= $deliveryEndTime) {
+            mx_json(['ok' => false, 'message' => 'Teslimat bitis saati baslangictan sonra olmali.'], 422);
+        }
+    }
+
+    if ($deliveryTime === 'İleri tarihli teslimat') {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $deliveryDate)) {
+            mx_json(['ok' => false, 'message' => 'Teslimat tarihi zorunludur.'], 422);
+        }
+        if ($deliveryDate < date('Y-m-d')) {
+            mx_json(['ok' => false, 'message' => 'Teslimat tarihi bugunden eski olamaz.'], 422);
+        }
+        $deliveryTime = $deliveryTime . ': ' . $deliveryDate . ' ' . $deliveryStartTime . ' - ' . $deliveryEndTime;
+    } elseif ($deliveryTime === 'Belirli saat aralığı') {
+        $deliveryTime = $deliveryTime . ': ' . $deliveryStartTime . ' - ' . $deliveryEndTime;
+    }
+
     $stage = 'db-connect';
     $trackingCode = 'MXTMP' . strtoupper(bin2hex(random_bytes(5)));
     $priceResult = mx_calculate_price($payload);
@@ -87,7 +113,7 @@ try {
         ':service_label' => mx_clean_string($payload['serviceLabel'] ?? $payload['service'], 80),
         ':package_type' => mx_clean_string($payload['packageType'], 40),
         ':package_label' => mx_clean_string($payload['packageLabel'] ?? $payload['packageType'], 80),
-        ':delivery_time' => mx_clean_string($payload['deliveryTime'] ?? '', 80),
+        ':delivery_time' => $deliveryTime,
         ':note' => mx_clean_text($payload['note'] ?? '', 1000),
         ':price' => $priceResult['price'],
         ':distance_km' => $priceResult['distance_km'],

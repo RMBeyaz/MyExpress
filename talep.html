@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/MyExpress.com.tr%20Logo.png">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260519-request-flow-v2">
   </head>
   <body>
     <header class="site-header" data-header>
@@ -129,12 +129,27 @@
                     <option>En kısa sürede</option>
                     <option>Bugün içinde</option>
                     <option>Belirli saat aralığı</option>
+                    <option>İleri tarihli teslimat</option>
                     <option>Gece teslimat</option>
                   </select>
                 </label>
                 <label>
                   Not
                   <input name="note" placeholder="Kırılabilir, bekleme, arama veya teslim talimatı">
+                </label>
+              </div>
+              <div class="form-grid schedule-grid" data-schedule-fields hidden>
+                <label data-schedule-date hidden>
+                  Teslimat tarihi
+                  <input type="date" name="deliveryDate">
+                </label>
+                <label>
+                  Başlangıç saati
+                  <input type="time" name="deliveryStartTime">
+                </label>
+                <label>
+                  Bitiş saati
+                  <input type="time" name="deliveryEndTime">
                 </label>
               </div>
             </div>

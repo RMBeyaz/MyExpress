@@ -57,7 +57,13 @@ $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) 
 $notice = mx_clean_string($_GET['notice'] ?? '', 40);
 $requests = [];
 $statuses = mx_statuses();
+$views = [
+    'normal' => 'Normal görünüm',
+    'today' => 'Bugün',
+    'all' => 'Tümü',
+];
 $filters = [
+    'view' => mx_clean_string($_GET['view'] ?? 'normal', 20),
     'status' => mx_clean_string($_GET['status'] ?? '', 32),
     'date_from' => mx_clean_string($_GET['date_from'] ?? '', 10),
     'date_to' => mx_clean_string($_GET['date_to'] ?? '', 10),
@@ -68,6 +74,9 @@ $filters = [
     'pickup_address' => mx_clean_string($_GET['pickup_address'] ?? '', 100),
     'dropoff_address' => mx_clean_string($_GET['dropoff_address'] ?? '', 100),
 ];
+if (!isset($views[$filters['view']])) {
+    $filters['view'] = 'normal';
+}
 $sortKey = $_GET['sort'] ?? 'date';
 $dirParam = strtolower((string) ($_GET['dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
 
@@ -106,6 +115,13 @@ if (mx_panel_is_logged_in()) {
         if ($filters['status'] !== '' && isset($statuses[$filters['status']])) {
             $where[] = 'status = :status';
             $params[':status'] = $filters['status'];
+        } elseif ($filters['view'] === 'normal') {
+            $where[] = "status NOT IN ('delivered', 'cancelled')";
+        }
+        if ($filters['view'] === 'today' && $filters['date_from'] === '' && $filters['date_to'] === '') {
+            $where[] = 'created_at >= :view_today_from AND created_at <= :view_today_to';
+            $params[':view_today_from'] = date('Y-m-d') . ' 00:00:00';
+            $params[':view_today_to'] = date('Y-m-d') . ' 23:59:59';
         }
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_from'])) {
             $where[] = 'created_at >= :date_from';
@@ -175,7 +191,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-users-filter-fix">
+    <link rel="stylesheet" href="../styles.css?v=20260519-request-flow-v2">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -220,6 +236,13 @@ if (mx_panel_is_logged_in()) {
             <div class="panel-toast is-visible">Talep silindi.</div>
           <?php endif; ?>
           <form class="panel-filters" method="get">
+            <label>Görünüm
+              <select name="view">
+                <?php foreach ($views as $key => $label): ?>
+                  <option value="<?= mx_h($key) ?>" <?= $filters['view'] === $key ? 'selected' : '' ?>><?= mx_h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
             <label>Durum
               <select name="status">
                 <option value="">Tümü</option>

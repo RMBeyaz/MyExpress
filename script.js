@@ -6,6 +6,8 @@ const priceEstimate = document.querySelector('[data-price-estimate]');
 const detailPriceEstimate = document.querySelector('[data-detail-price-estimate]');
 const requestSummary = document.querySelector('[data-request-summary]');
 const detailForm = document.querySelector('[data-detail-form]');
+const scheduleFields = document.querySelector('[data-schedule-fields]');
+const scheduleDateField = document.querySelector('[data-schedule-date]');
 const addressSearchTimers = new WeakMap();
 
 const istanbulDistricts = [
@@ -212,6 +214,31 @@ const setFieldError = (input, message = '') => {
     error.textContent = message;
     input.insertAdjacentElement('afterend', error);
   }
+};
+
+const updateScheduleFields = () => {
+  if (!detailForm || !scheduleFields) return;
+
+  const value = detailForm.elements.deliveryTime?.value || '';
+  const requiresTime = value === 'Belirli saat aralığı' || value === 'İleri tarihli teslimat';
+  const requiresDate = value === 'İleri tarihli teslimat';
+  const dateInput = detailForm.elements.deliveryDate;
+  const startInput = detailForm.elements.deliveryStartTime;
+  const endInput = detailForm.elements.deliveryEndTime;
+
+  scheduleFields.hidden = !requiresTime;
+  if (scheduleDateField) scheduleDateField.hidden = !requiresDate;
+
+  if (dateInput) {
+    dateInput.required = requiresDate;
+    dateInput.min = new Date().toISOString().slice(0, 10);
+    if (!requiresDate) dateInput.value = '';
+  }
+  [startInput, endInput].forEach((input) => {
+    if (!input) return;
+    input.required = requiresTime;
+    if (!requiresTime) input.value = '';
+  });
 };
 
 const updatePriceEstimate = () => {
@@ -593,6 +620,17 @@ detailForm?.addEventListener('submit', (event) => {
     return;
   }
 
+  const deliveryTime = detailForm.elements.deliveryTime?.value || '';
+  const startTime = detailForm.elements.deliveryStartTime;
+  const endTime = detailForm.elements.deliveryEndTime;
+  if ((deliveryTime === 'Belirli saat aralığı' || deliveryTime === 'İleri tarihli teslimat')
+    && startTime?.value && endTime?.value && startTime.value >= endTime.value) {
+    setFieldError(endTime, 'Bitiş saati başlangıçtan sonra olmalı.');
+    endTime.reportValidity();
+    return;
+  }
+  if (endTime) setFieldError(endTime, '');
+
   if (!detailForm.reportValidity()) return;
 
   const formData = new FormData(detailForm);
@@ -640,13 +678,17 @@ detailForm?.addEventListener('submit', (event) => {
 });
 
 fillDetailFormFromParams();
+updateScheduleFields();
 updateDetailEstimate();
 if (priceEstimate || detailPriceEstimate) {
   loadPricingConfig();
 }
 
 detailForm?.querySelectorAll('input[type="radio"], select').forEach((input) => {
-  input.addEventListener('change', updateDetailEstimate);
+  input.addEventListener('change', () => {
+    updateScheduleFields();
+    updateDetailEstimate();
+  });
 });
 
 detailForm?.querySelectorAll('textarea').forEach((textarea) => {
