@@ -128,16 +128,29 @@ if (mx_panel_is_logged_in()) {
             $params[':recipient'] = '%' . $filters['recipient'] . '%';
         }
         if ($filters['phone'] !== '') {
-            $where[] = '(sender_phone LIKE :phone OR recipient_phone LIKE :phone)';
-            $params[':phone'] = '%' . $filters['phone'] . '%';
+            $phoneDigits = preg_replace('/\D+/', '', $filters['phone']) ?? '';
+            $senderPhoneClean = "REPLACE(REPLACE(REPLACE(REPLACE(sender_phone, ' ', ''), '-', ''), '(', ''), ')', '')";
+            $recipientPhoneClean = "REPLACE(REPLACE(REPLACE(REPLACE(recipient_phone, ' ', ''), '-', ''), '(', ''), ')', '')";
+            $where[] = "(
+                sender_phone LIKE :sender_phone_raw
+                OR recipient_phone LIKE :recipient_phone_raw
+                OR {$senderPhoneClean} LIKE :sender_phone_digits
+                OR {$recipientPhoneClean} LIKE :recipient_phone_digits
+            )";
+            $params[':sender_phone_raw'] = '%' . $filters['phone'] . '%';
+            $params[':recipient_phone_raw'] = '%' . $filters['phone'] . '%';
+            $params[':sender_phone_digits'] = '%' . $phoneDigits . '%';
+            $params[':recipient_phone_digits'] = '%' . $phoneDigits . '%';
         }
         if ($filters['pickup_address'] !== '') {
-            $where[] = '(pickup LIKE :pickup_address OR pickup_street LIKE :pickup_address)';
+            $where[] = '(pickup LIKE :pickup_address OR pickup_street LIKE :pickup_street)';
             $params[':pickup_address'] = '%' . $filters['pickup_address'] . '%';
+            $params[':pickup_street'] = '%' . $filters['pickup_address'] . '%';
         }
         if ($filters['dropoff_address'] !== '') {
-            $where[] = '(dropoff LIKE :dropoff_address OR dropoff_street LIKE :dropoff_address)';
+            $where[] = '(dropoff LIKE :dropoff_address OR dropoff_street LIKE :dropoff_street)';
             $params[':dropoff_address'] = '%' . $filters['dropoff_address'] . '%';
+            $params[':dropoff_street'] = '%' . $filters['dropoff_address'] . '%';
         }
 
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
@@ -162,7 +175,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-filters-v2">
+    <link rel="stylesheet" href="../styles.css?v=20260519-users-filter-fix">
   </head>
   <body class="panel-body">
     <main class="panel-shell">

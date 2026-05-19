@@ -9,6 +9,11 @@ $pdo = mx_pdo();
 $message = '';
 $error = '';
 $roles = mx_roles();
+$editableRoles = array_filter(
+    $roles,
+    static fn (string $key): bool => $key !== 'admin',
+    ARRAY_FILTER_USE_KEY
+);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = mx_clean_string($_POST['action'] ?? 'create', 32);
@@ -27,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!mx_panel_is_admin() && $role !== 'staff') {
                 throw new RuntimeException('Yonetici sadece calisan ekleyebilir.');
             }
-            if ($username === '' || $fullName === '' || strlen($password) < 8 || !isset($roles[$role])) {
+            if ($username === '' || $fullName === '' || strlen($password) < 8 || !isset($editableRoles[$role])) {
                 throw new RuntimeException('Kullanici bilgileri eksik veya gecersiz.');
             }
 
@@ -44,6 +49,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             mx_audit_log(null, 'panel_user_create', $username . ' kullanicisi olusturuldu. Rol: ' . $role);
             $message = 'Kullanıcı oluşturuldu.';
+        }
+
+        if ($action === 'update') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $username = mx_clean_string($_POST['username'] ?? '', 80);
+            $fullName = mx_clean_string($_POST['full_name'] ?? '', 120);
+            $role = mx_clean_string($_POST['role'] ?? 'staff', 20);
+            $isActive = (int) ($_POST['is_active'] ?? 0) === 1 ? 1 : 0;
+            $password = (string) ($_POST['password'] ?? '');
+
+            $target = $pdo->prepare('SELECT username, role FROM panel_users WHERE id = :id');
+            $target->execute([':id' => $id]);
+            $targetUser = $target->fetch();
+
+            if (!$targetUser) {
+                throw new RuntimeException('Kullanici bulunamadi.');
+            }
+            if ($username === '' || $fullName === '' || !isset($editableRoles[$role])) {
+                throw new RuntimeException('Kullanici bilgileri eksik veya gecersiz.');
+            }
+            if (!mx_panel_is_admin() && ($targetUser['role'] !== 'staff' || $role !== 'staff')) {
+                throw new RuntimeException('Yonetici sadece calisanlari guncelleyebilir.');
+            }
+            if ($password !== '' && strlen($password) < 8) {
+                throw new RuntimeException('Sifre en az 8 karakter olmali.');
+            }
+
+            $params = [
+                ':username' => $username,
+                ':full_name' => $fullName,
+                ':role' => $role,
+                ':is_active' => $isActive,
+                ':id' => $id,
+            ];
+            $passwordSql = '';
+            if ($password !== '') {
+                $passwordSql = ', password_hash = :password_hash';
+                $params[':password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            }
+
+            $stmt = $pdo->prepare(
+                "UPDATE panel_users
+                 SET username = :username, full_name = :full_name, role = :role, is_active = :is_active{$passwordSql}
+                 WHERE id = :id"
+            );
+            $stmt->execute($params);
+            mx_audit_log(null, 'panel_user_update', $targetUser['username'] . ' kullanicisi guncellendi. Yeni kullanici: ' . $username . ' Rol: ' . $role);
+            $message = 'Kullanıcı güncellendi.';
+        }
+
+        if ($action === 'delete') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $target = $pdo->prepare('SELECT username, role FROM panel_users WHERE id = :id');
+            $target->execute([':id' => $id]);
+            $targetUser = $target->fetch();
+
+            if (!$targetUser) {
+                throw new RuntimeException('Kullanici bulunamadi.');
+            }
+            if ((int) ($_SESSION['mx_panel_user_id'] ?? 0) === $id) {
+                throw new RuntimeException('Aktif oturumdaki kullanici silinemez.');
+            }
+            if (!mx_panel_is_admin() && $targetUser['role'] !== 'staff') {
+                throw new RuntimeException('Yonetici sadece calisanlari silebilir.');
+            }
+
+            $pdo->prepare('DELETE FROM panel_users WHERE id = :id')->execute([':id' => $id]);
+            mx_audit_log(null, 'panel_user_delete', $targetUser['username'] . ' kullanicisi silindi.');
+            $message = 'Kullanıcı silindi.';
         }
 
         if ($action === 'toggle') {
@@ -102,7 +176,7 @@ $users = [];
 if (!mx_table_exists('panel_users')) {
     $error = 'panel_users tablosu yok. Önce migrations/004_panel_users.sql dosyasını phpMyAdmin üzerinden çalıştırın.';
 } else {
-    $users = $pdo->query('SELECT id, username, full_name, role, is_active, last_login_at, created_at FROM panel_users ORDER BY role, username')->fetchAll();
+    $users = $pdo->query("SELECT id, username, full_name, role, is_active, last_login_at, created_at FROM panel_users WHERE role <> 'admin' ORDER BY role, username")->fetchAll();
 }
 ?>
 <!doctype html>
@@ -111,7 +185,7 @@ if (!mx_table_exists('panel_users')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-filters-v2">
+    <link rel="stylesheet" href="../styles.css?v=20260519-users-filter-fix">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -138,7 +212,7 @@ if (!mx_table_exists('panel_users')) {
             <label>Ad soyad <input name="full_name" required></label>
             <label>Rol
               <select name="role">
-                <?php foreach ($roles as $key => $label): ?>
+                <?php foreach ($editableRoles as $key => $label): ?>
                   <?php if (mx_panel_is_admin() || $key === 'staff'): ?>
                     <option value="<?= mx_h($key) ?>"><?= mx_h($label) ?></option>
                   <?php endif; ?>
@@ -153,7 +227,6 @@ if (!mx_table_exists('panel_users')) {
         <article class="panel-card">
           <h2>Rol Mantığı</h2>
           <dl class="panel-detail-list">
-            <dt>Admin</dt><dd>Tüm sayfalar, kullanıcı ve fiyat yönetimi.</dd>
             <dt>Yönetici</dt><dd>Talep operasyonu, fiyat yönetimi, çalışan oluşturma.</dd>
             <dt>Çalışan</dt><dd>Talep listesi ve talep operasyon işlemleri.</dd>
           </dl>
@@ -173,23 +246,42 @@ if (!mx_table_exists('panel_users')) {
             <tbody>
               <?php foreach ($users as $user): ?>
                 <tr>
-                  <td><strong><?= mx_h($user['full_name']) ?></strong><br><small><?= mx_h($user['username']) ?></small></td>
-                  <td><?= mx_h(mx_role_label($user['role'])) ?></td>
-                  <td><span class="panel-status"><?= (int) $user['is_active'] === 1 ? 'Aktif' : 'Pasif' ?></span></td>
+                  <td>
+                    <label class="table-edit-label">Ad soyad
+                      <input form="user-update-<?= (int) $user['id'] ?>" name="full_name" value="<?= mx_h($user['full_name']) ?>" required>
+                    </label>
+                    <label class="table-edit-label">Kullanıcı adı
+                      <input form="user-update-<?= (int) $user['id'] ?>" name="username" value="<?= mx_h($user['username']) ?>" required>
+                    </label>
+                  </td>
+                  <td>
+                    <select form="user-update-<?= (int) $user['id'] ?>" name="role">
+                      <?php foreach ($editableRoles as $key => $label): ?>
+                        <?php if (mx_panel_is_admin() || $key === 'staff'): ?>
+                          <option value="<?= mx_h($key) ?>" <?= $user['role'] === $key ? 'selected' : '' ?>><?= mx_h($label) ?></option>
+                        <?php endif; ?>
+                      <?php endforeach; ?>
+                    </select>
+                  </td>
+                  <td>
+                    <select form="user-update-<?= (int) $user['id'] ?>" name="is_active">
+                      <option value="1" <?= (int) $user['is_active'] === 1 ? 'selected' : '' ?>>Aktif</option>
+                      <option value="0" <?= (int) $user['is_active'] === 0 ? 'selected' : '' ?>>Pasif</option>
+                    </select>
+                  </td>
                   <td><?= $user['last_login_at'] ? mx_h($user['last_login_at']) : '-' ?></td>
                   <td>
                     <div class="user-actions">
-                      <form method="post">
-                        <input type="hidden" name="action" value="toggle">
+                      <form id="user-update-<?= (int) $user['id'] ?>" method="post" class="password-inline">
+                        <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
-                        <input type="hidden" name="is_active" value="<?= (int) $user['is_active'] === 1 ? 0 : 1 ?>">
-                        <button class="btn btn-secondary" type="submit"><?= (int) $user['is_active'] === 1 ? 'Pasifleştir' : 'Aktifleştir' ?></button>
+                        <input type="password" name="password" minlength="8" placeholder="Yeni şifre (opsiyonel)">
+                        <button class="btn btn-primary" type="submit">Kaydet</button>
                       </form>
-                      <form method="post" class="password-inline">
-                        <input type="hidden" name="action" value="password">
+                      <form method="post" onsubmit="return confirm('Bu kullanıcı silinsin mi?');">
+                        <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
-                        <input type="password" name="password" minlength="8" placeholder="Yeni şifre" required>
-                        <button class="btn btn-primary" type="submit">Şifrele</button>
+                        <button class="btn btn-danger" type="submit">Sil</button>
                       </form>
                     </div>
                   </td>
