@@ -7,6 +7,7 @@ require __DIR__ . '/../api/bootstrap.php';
 $error = '';
 $config = [];
 $panelError = '';
+$notice = '';
 
 try {
     $config = mx_config();
@@ -15,7 +16,33 @@ try {
     mx_log_error('panel config failed', $exception);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && mx_panel_is_logged_in() && ($_POST['action'] ?? '') === 'delete') {
+    $deleteId = (int) ($_POST['id'] ?? 0);
+    $deleteReason = mx_clean_text($_POST['delete_reason'] ?? '', 600);
+
+    try {
+        if ($deleteId <= 0 || $deleteReason === '') {
+            throw new RuntimeException('Silme aciklamasi zorunludur.');
+        }
+
+        $stmt = mx_pdo()->prepare('SELECT tracking_code FROM courier_requests WHERE id = :id');
+        $stmt->execute([':id' => $deleteId]);
+        $trackingCode = (string) ($stmt->fetchColumn() ?: '');
+        if ($trackingCode === '') {
+            throw new RuntimeException('Talep bulunamadi.');
+        }
+
+        mx_audit_log($deleteId, 'request_delete', 'Talep silindi. Talep: ' . $trackingCode . ' Aciklama: ' . $deleteReason);
+        mx_pdo()->prepare('DELETE FROM courier_requests WHERE id = :id')->execute([':id' => $deleteId]);
+        header('Location: index.php?notice=deleted');
+        exit;
+    } catch (Throwable $exception) {
+        $panelError = 'Talep silinemedi. Açıklama girildiğinden emin olun.';
+        mx_log_error('request delete failed', $exception, ['id' => $deleteId]);
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !mx_panel_is_logged_in()) {
     $user = trim((string) ($_POST['username'] ?? ''));
     $pass = (string) ($_POST['password'] ?? '');
     if (mx_panel_login($user, $pass)) {
@@ -27,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) || !empty($config['panel_pass']));
+$notice = mx_clean_string($_GET['notice'] ?? '', 40);
 $requests = [];
 $statuses = mx_statuses();
 $filters = [
@@ -170,6 +198,9 @@ if (mx_panel_is_logged_in()) {
             <h2>Son Talepler</h2>
             <span><?= count($requests) ?> kayıt</span>
           </div>
+          <?php if ($notice === 'deleted'): ?>
+            <div class="panel-toast is-visible">Talep silindi.</div>
+          <?php endif; ?>
           <form class="panel-filters" method="get">
             <label>Durum
               <select name="status">
@@ -204,6 +235,7 @@ if (mx_panel_is_logged_in()) {
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('distance')) ?>">Mesafe<?= mx_h($sortMark('distance')) ?></a></th>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('price')) ?>">Ücret<?= mx_h($sortMark('price')) ?></a></th>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('date')) ?>">Tarih<?= mx_h($sortMark('date')) ?></a></th>
+                  <th>İşlem</th>
                 </tr>
               </thead>
               <tbody>
@@ -217,16 +249,50 @@ if (mx_panel_is_logged_in()) {
                     <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
                     <td><?= mx_h($request['price']) ?></td>
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
+                    <td><button class="panel-icon-btn danger" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>">Sil</button></td>
                   </tr>
                 <?php endforeach; ?>
                 <?php if (!$requests): ?>
-                  <tr><td colspan="8">Henüz talep yok.</td></tr>
+                  <tr><td colspan="9">Henüz talep yok.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>
           </div>
         </section>
+        <div class="panel-modal" data-delete-modal hidden>
+          <form class="panel-modal-card" method="post">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" data-delete-id>
+            <h2>Talebi Sil</h2>
+            <p><strong data-delete-code></strong> numaralı talep kalıcı olarak silinecek.</p>
+            <label>Silme açıklaması
+              <textarea name="delete_reason" required placeholder="Neden silindi?"></textarea>
+            </label>
+            <div class="panel-modal-actions">
+              <button class="btn btn-secondary" type="button" data-delete-close>Vazgeç</button>
+              <button class="btn btn-primary" type="submit">Evet, Sil</button>
+            </div>
+          </form>
+        </div>
       <?php endif; ?>
     </main>
+    <script>
+      const deleteModal = document.querySelector('[data-delete-modal]');
+      const deleteId = document.querySelector('[data-delete-id]');
+      const deleteCode = document.querySelector('[data-delete-code]');
+      document.querySelectorAll('[data-delete-open]').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (deleteId) deleteId.value = button.dataset.id || '';
+          if (deleteCode) deleteCode.textContent = button.dataset.code || '';
+          deleteModal.hidden = false;
+        });
+      });
+      document.querySelector('[data-delete-close]')?.addEventListener('click', () => {
+        deleteModal.hidden = true;
+      });
+      deleteModal?.addEventListener('click', (event) => {
+        if (event.target === deleteModal) deleteModal.hidden = true;
+      });
+    </script>
   </body>
 </html>

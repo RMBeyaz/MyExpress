@@ -244,7 +244,17 @@ function mx_panel_user(): string
 
 function mx_panel_role(): string
 {
-    return (string) ($_SESSION['mx_panel_role'] ?? 'staff');
+    if (isset($_SESSION['mx_panel_role'])) {
+        return (string) $_SESSION['mx_panel_role'];
+    }
+
+    $configUser = (string) (mx_config()['panel_user'] ?? '');
+    if ($configUser !== '' && isset($_SESSION['mx_panel_user']) && hash_equals($configUser, (string) $_SESSION['mx_panel_user'])) {
+        $_SESSION['mx_panel_role'] = 'admin';
+        return 'admin';
+    }
+
+    return 'staff';
 }
 
 function mx_panel_is_admin(): bool

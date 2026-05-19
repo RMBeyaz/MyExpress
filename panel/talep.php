@@ -12,6 +12,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = (int) ($_POST['id'] ?? 0);
     $action = mx_clean_string($_POST['action'] ?? 'status', 32);
 
+    if ($id > 0 && $action === 'delete') {
+        $deleteReason = mx_clean_text($_POST['delete_reason'] ?? '', 600);
+        if ($deleteReason === '') {
+            header('Location: talep.php?id=' . $id);
+            exit;
+        }
+
+        $stmt = $pdo->prepare('SELECT tracking_code FROM courier_requests WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        $trackingCode = (string) ($stmt->fetchColumn() ?: '');
+        if ($trackingCode !== '') {
+            mx_audit_log($id, 'request_delete', 'Talep detayindan silindi. Talep: ' . $trackingCode . ' Aciklama: ' . $deleteReason);
+            $pdo->prepare('DELETE FROM courier_requests WHERE id = :id')->execute([':id' => $id]);
+        }
+
+        header('Location: index.php?notice=deleted');
+        exit;
+    }
+
     if ($id > 0 && $action === 'status') {
         $status = mx_clean_string($_POST['status'] ?? '', 32);
         $note = mx_clean_text($_POST['note'] ?? '', 1000);
@@ -116,6 +135,7 @@ $statuses = mx_statuses();
         </div>
         <div class="panel-header-actions">
           <span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span>
+          <button class="btn btn-danger" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>">Talebi Sil</button>
           <a class="btn btn-secondary" href="index.php">Listeye Dön</a>
         </div>
       </section>
@@ -206,7 +226,7 @@ $statuses = mx_statuses();
       </form>
 
       <?php if ($auditLogs): ?>
-        <section class="panel-card">
+        <section class="panel-card panel-audit-card">
           <h2>İşlem Kayıtları</h2>
           <div class="panel-log">
             <?php foreach ($auditLogs as $auditLog): ?>
@@ -216,15 +236,40 @@ $statuses = mx_statuses();
         </section>
       <?php endif; ?>
     </main>
+    <div class="panel-modal" data-delete-modal hidden>
+      <form class="panel-modal-card" method="post">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" data-delete-id value="<?= (int) $request['id'] ?>">
+        <h2>Talebi Sil</h2>
+        <p><strong data-delete-code><?= mx_h($request['tracking_code']) ?></strong> numaralı talep kalıcı olarak silinecek.</p>
+        <label>Silme açıklaması
+          <textarea name="delete_reason" required placeholder="Neden silindi?"></textarea>
+        </label>
+        <div class="panel-modal-actions">
+          <button class="btn btn-secondary" type="button" data-delete-close>Vazgeç</button>
+          <button class="btn btn-primary" type="submit">Evet, Sil</button>
+        </div>
+      </form>
+    </div>
     <script>
       const editForm = document.querySelector('[data-panel-edit-form]');
       const editToggle = document.querySelector('[data-edit-toggle]');
       const saveButton = document.querySelector('[data-save-edit]');
+      const deleteModal = document.querySelector('[data-delete-modal]');
       editToggle?.addEventListener('click', () => {
         editForm?.classList.remove('is-readonly');
         editForm?.querySelectorAll('input[readonly], textarea[readonly]').forEach((field) => field.removeAttribute('readonly'));
         editToggle.hidden = true;
         if (saveButton) saveButton.hidden = false;
+      });
+      document.querySelector('[data-delete-open]')?.addEventListener('click', () => {
+        deleteModal.hidden = false;
+      });
+      document.querySelector('[data-delete-close]')?.addEventListener('click', () => {
+        deleteModal.hidden = true;
+      });
+      deleteModal?.addEventListener('click', (event) => {
+        if (event.target === deleteModal) deleteModal.hidden = true;
       });
     </script>
   </body>
