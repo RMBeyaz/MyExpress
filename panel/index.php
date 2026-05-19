@@ -191,7 +191,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260519-detail-controls-v1">
+    <link rel="stylesheet" href="../styles.css?v=20260519-font-pass">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
