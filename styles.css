@@ -920,6 +920,56 @@ h3 {
   color: rgba(255, 255, 255, 0.78);
 }
 
+.whatsapp-contact {
+  position: fixed;
+  right: clamp(16px, 3vw, 28px);
+  bottom: clamp(16px, 3vw, 28px);
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 16px 0 13px;
+  color: #fff;
+  background: #1fae5b;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  box-shadow: 0 16px 38px rgba(11, 34, 54, 0.22);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.whatsapp-contact:hover {
+  color: #fff;
+  background: #168e49;
+  transform: translateY(-2px);
+  box-shadow: 0 20px 44px rgba(11, 34, 54, 0.26);
+}
+
+.whatsapp-contact svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.process-card-whatsapp span {
+  background: #1fae5b;
+}
+
+.contact-card-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 8px;
+  color: var(--navy);
+  font-weight: 900;
+}
+
+.contact-card-link:hover {
+  color: var(--red);
+}
+
 .success-page {
   display: grid;
   place-items: center;

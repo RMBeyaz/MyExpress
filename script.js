@@ -853,3 +853,24 @@ if (trackingForm) {
     trackingForm.requestSubmit();
   }
 }
+
+const addWhatsappContactButton = () => {
+  if (document.querySelector('[data-whatsapp-contact]')) return;
+
+  const button = document.createElement('a');
+  button.className = 'whatsapp-contact';
+  button.href = 'https://wa.me/905467691904?text=Merhaba%2C%20MyExpress%20kurye%20hizmeti%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum.';
+  button.target = '_blank';
+  button.rel = 'noopener';
+  button.setAttribute('aria-label', 'MyExpress WhatsApp ile iletişim');
+  button.setAttribute('data-whatsapp-contact', '');
+  button.innerHTML = `
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M16.02 4.02c-6.55 0-11.88 5.31-11.88 11.84 0 2.08.55 4.12 1.59 5.91L4 28l6.39-1.68a11.9 11.9 0 0 0 5.63 1.43c6.55 0 11.88-5.31 11.88-11.84S22.57 4.02 16.02 4.02Zm0 21.72c-1.76 0-3.48-.47-4.99-1.36l-.36-.21-3.79 1 1.01-3.69-.24-.38a9.75 9.75 0 0 1-1.5-5.24c0-5.42 4.43-9.83 9.87-9.83s9.87 4.41 9.87 9.83-4.43 9.88-9.87 9.88Zm5.42-7.38c-.3-.15-1.76-.86-2.03-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.15-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.46-.88-.78-1.47-1.75-1.64-2.04-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.46s1.07 2.86 1.22 3.06c.15.2 2.1 3.19 5.08 4.47.71.3 1.26.48 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35Z"/>
+    </svg>
+    <span>WhatsApp</span>
+  `;
+  document.body.appendChild(button);
+};
+
+addWhatsappContactButton();
