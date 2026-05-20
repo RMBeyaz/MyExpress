@@ -690,6 +690,61 @@ h3 {
   padding: clamp(58px, 8vw, 104px) clamp(20px, 5vw, 72px);
 }
 
+.why-section,
+.faq-section {
+  padding: clamp(58px, 8vw, 104px) clamp(20px, 5vw, 72px);
+  background: #fff;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.why-grid article {
+  padding: 20px;
+  background: #f8fafb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.why-grid h3 {
+  margin-bottom: 8px;
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.why-grid p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.faq-list {
+  display: grid;
+  gap: 10px;
+  max-width: 920px;
+}
+
+.faq-list details {
+  padding: 16px 18px;
+  background: #f8fafb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.faq-list summary {
+  color: var(--navy);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.faq-list p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
 .section-heading {
   max-width: 760px;
   margin-bottom: 32px;
@@ -971,11 +1026,15 @@ h3 {
 
 .site-footer {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 1.25fr 0.9fr 0.9fr 1.15fr;
   gap: 28px;
   padding: 42px clamp(20px, 5vw, 72px);
   background: #071827;
   color: #fff;
+}
+
+.site-footer p {
+  max-width: 360px;
 }
 
 .footer-brand {
@@ -990,6 +1049,14 @@ h3 {
   display: grid;
   gap: 8px;
   font-style: normal;
+}
+
+.footer-bottom {
+  grid-column: 1 / -1;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
 }
 
 .site-footer a,
@@ -2216,6 +2283,8 @@ h3 {
   .service-band,
   .solutions,
   .workflow,
+  .why-section,
+  .faq-section,
   .form-page-heading {
     padding-inline: 16px;
   }
@@ -2239,6 +2308,7 @@ h3 {
   .trust-strip,
   .service-grid,
   .solution-grid,
+  .why-grid,
   .all-services-grid,
   .detail-layout,
   .tracking-form,

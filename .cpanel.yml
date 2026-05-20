@@ -10,14 +10,18 @@ deployment:
     - /bin/cp -R panel $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
     - /bin/cp cozumler.html $DEPLOYPATH
+    - /bin/cp gizlilik-politikasi.html $DEPLOYPATH
     - /bin/cp hizmetler.html $DEPLOYPATH
     - /bin/cp iletisim.html $DEPLOYPATH
     - /bin/cp kurye-hizmet-sozlesmesi.html $DEPLOYPATH
     - /bin/cp kvkk-politikasi.html $DEPLOYPATH
     - /bin/cp nasil-calisir.html $DEPLOYPATH
+    - /bin/cp sss.html $DEPLOYPATH
     - /bin/cp talep.html $DEPLOYPATH
     - /bin/cp talep-basarili.html $DEPLOYPATH
     - /bin/cp takip.html $DEPLOYPATH
+    - /bin/cp teslimat-sartlari.html $DEPLOYPATH
+    - /bin/cp yasakli-gonderiler.html $DEPLOYPATH
     - /bin/cp robots.txt $DEPLOYPATH
     - /bin/cp sitemap.xml $DEPLOYPATH
     - /bin/cp script.js $DEPLOYPATH
