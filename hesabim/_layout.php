@@ -13,7 +13,7 @@ function mx_account_header(string $title, string $active = ''): void
     <title><?= mx_h($title) ?> | MyExpress Hesabım</title>
     <meta name="description" content="MyExpress müşteri hesabı ile kayıtlı adreslerinizi, kurye taleplerinizi ve faturalarınızı görüntüleyin.">
     <link rel="icon" type="image/png" href="../assets/Logo.png">
-    <link rel="stylesheet" href="../styles.css?v=20260521-customer-portal">
+    <link rel="stylesheet" href="../styles.css?v=20260521-mobile-menu-float">
   </head>
   <body class="account-body">
     <header class="account-header">
@@ -47,7 +47,7 @@ function mx_account_footer(): void
       <a href="mailto:info@myexpress.com.tr">E-posta Gönder</a>
       <a href="https://wa.me/905467691904" target="_blank" rel="noopener">WhatsApp'tan Yaz</a>
     </footer>
-    <script src="../script.js?v=20260521-customer-portal"></script>
+    <script src="../script.js?v=20260521-mobile-menu-float"></script>
   </body>
 </html>
     <?php

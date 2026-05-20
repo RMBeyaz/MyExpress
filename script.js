@@ -1,5 +1,7 @@
 const header = document.querySelector('[data-header]');
 let menuToggle = document.querySelector('[data-menu-toggle]');
+const mainNav = header?.querySelector('.main-nav');
+const headerActions = header?.querySelector('.header-actions');
 const deliveryForm = document.querySelector('[data-home-form]');
 const addressInputs = document.querySelectorAll('[data-address-input]');
 const priceEstimate = document.querySelector('[data-price-estimate]');
@@ -21,6 +23,13 @@ if (header && !menuToggle) {
   menuToggle.setAttribute('data-menu-toggle', '');
   menuToggle.innerHTML = '<span></span><span></span><span></span>';
   header.appendChild(menuToggle);
+}
+
+if (header && mainNav && headerActions && !header.querySelector('.mobile-menu-panel')) {
+  const mobilePanel = document.createElement('div');
+  mobilePanel.className = 'mobile-menu-panel';
+  header.insertBefore(mobilePanel, menuToggle || null);
+  mobilePanel.append(mainNav, headerActions);
 }
 
 const istanbulDistricts = [
