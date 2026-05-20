@@ -332,18 +332,40 @@ const districtFromDisplay = (display) => {
   return parts.length > 1 ? parts[parts.length - 1] : '';
 };
 
+const addressPartsFromLocation = (location) => {
+  const parts = location.addressParts || {};
+  return {
+    city: parts.city || 'İstanbul',
+    district: parts.district || districtFromDisplay(location.display),
+    road: parts.road || (['Cadde', 'Bulvar', 'Cadde/Sokak'].includes(location.type) ? String(location.display).split(',')[0].trim() : ''),
+    buildingNo: parts.buildingNo || '',
+  };
+};
+
+const fillDetailAddressParts = (input, location) => {
+  if (!detailForm || input.form !== detailForm || !['pickup', 'dropoff'].includes(input.name)) return;
+
+  const parts = addressPartsFromLocation(location);
+  const fields = {
+    City: parts.city,
+    District: parts.district,
+    Road: parts.road,
+    BuildingNo: parts.buildingNo,
+  };
+
+  Object.entries(fields).forEach(([suffix, value]) => {
+    const field = detailForm.elements[`${input.name}${suffix}`];
+    if (field && value) field.value = value;
+  });
+};
+
 const selectLocation = (input, location) => {
   input.value = location.display;
   input.dataset.selectedLabel = location.display;
   input.dataset.selectedLat = String(location.lat);
   input.dataset.selectedLng = String(location.lng);
   input.dataset.selectedType = location.type;
-  if (detailForm && input.form === detailForm && ['pickup', 'dropoff'].includes(input.name)) {
-    const cityInput = detailForm.elements[`${input.name}City`];
-    const districtInput = detailForm.elements[`${input.name}District`];
-    if (cityInput && !cityInput.value.trim()) cityInput.value = 'İstanbul';
-    if (districtInput && !districtInput.value.trim()) districtInput.value = districtFromDisplay(location.display);
-  }
+  fillDetailAddressParts(input, location);
   addressInputs.forEach(closeAutocomplete);
   window.setTimeout(() => input.blur(), 0);
   updatePriceEstimate();
@@ -386,6 +408,12 @@ const fetchRemoteLocations = async (query) => {
         lat: Number(result.lat),
         lng: Number(result.lon),
         type: getRemoteAddressType(result),
+        addressParts: {
+          city: result.address?.city || result.address?.province || result.address?.state || 'İstanbul',
+          district: result.address?.town || result.address?.county || result.address?.city_district || '',
+          road: result.address?.road || result.address?.pedestrian || result.address?.footway || result.address?.cycleway || result.address?.path || '',
+          buildingNo: result.address?.house_number || '',
+        },
       }))
       .filter((result) => Number.isFinite(result.lat) && Number.isFinite(result.lng));
   } catch {
@@ -594,7 +622,20 @@ const fillDetailFormFromParams = () => {
   if (!detailForm) return;
 
   const params = new URLSearchParams(window.location.search);
-  ['pickup', 'dropoff', 'pickupStreet', 'dropoffStreet'].forEach((name) => {
+  [
+    'pickup',
+    'dropoff',
+    'pickupCity',
+    'pickupDistrict',
+    'pickupRoad',
+    'pickupBuildingNo',
+    'pickupStreet',
+    'dropoffCity',
+    'dropoffDistrict',
+    'dropoffRoad',
+    'dropoffBuildingNo',
+    'dropoffStreet',
+  ].forEach((name) => {
     const input = detailForm.elements[name];
     const value = params.get(name);
     if (input && value) input.value = value;
