@@ -106,6 +106,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pricing = mx_pricing_settings();
         $service = mx_clean_string($_POST['service'] ?? 'normal', 40);
         $packageType = mx_clean_string($_POST['package_type'] ?? 'evrak', 40);
+        if (!isset($pricing['services'][$service])) {
+            $service = 'normal';
+        }
+        if (!isset($pricing['packages'][$packageType])) {
+            $packageType = 'evrak';
+        }
         $serviceLabel = $pricing['services'][$service]['label'] ?? $service;
         $packageLabel = $pricing['packages'][$packageType]['label'] ?? $packageType;
         $stmt = $pdo->prepare(
@@ -208,7 +214,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-detail-actions">
+    <link rel="stylesheet" href="../styles.css?v=20260520-panel-fixes">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -288,7 +294,9 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         <div class="panel-card-heading">
           <h2>Talep Bilgileri</h2>
           <div class="panel-header-actions">
-            <button class="btn btn-secondary" type="button" data-edit-toggle>Düzenle</button>
+            <button class="panel-icon-btn edit-action" type="button" data-edit-toggle aria-label="Talep bilgilerini düzenle" title="Düzenle">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.95l-2.75-2.75L4 17.25Zm15.7-10.1a1 1 0 0 0 0-1.42l-1.43-1.43a1 1 0 0 0-1.42 0l-1.12 1.12 2.75 2.75 1.22-1.02Z"/></svg>
+            </button>
           </div>
         </div>
         <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">

@@ -14,6 +14,14 @@ $editableRoles = array_filter(
     static fn (string $key): bool => $key !== 'admin',
     ARRAY_FILTER_USE_KEY
 );
+$courierVehicleOptions = [
+    'motor' => 'Motorlu Kurye',
+    'scooter' => 'Scooter',
+    'otomobil' => 'Otomobil',
+    'hafif_ticari' => 'Hafif Ticari',
+    'panelvan' => 'Panelvan',
+    'yaya' => 'Yaya Kurye',
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = mx_clean_string($_POST['action'] ?? 'create', 32);
@@ -30,12 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $fullName = mx_clean_string($_POST['courier_full_name'] ?? '', 120);
             $phone = mx_clean_string($_POST['courier_phone'] ?? '', 40);
-            $vehicleType = mx_clean_string($_POST['vehicle_type'] ?? '', 80);
+            $vehicleTypeKey = mx_clean_string($_POST['vehicle_type'] ?? '', 40);
             $plate = mx_clean_string($_POST['plate'] ?? '', 40);
 
-            if ($fullName === '' || $phone === '') {
-                throw new RuntimeException('Kurye adi ve telefonu zorunludur.');
+            if ($fullName === '' || $phone === '' || !isset($courierVehicleOptions[$vehicleTypeKey])) {
+                throw new RuntimeException('Kurye adi, telefonu ve arac tipi zorunludur.');
             }
+            $vehicleType = $courierVehicleOptions[$vehicleTypeKey];
 
             $stmt = $pdo->prepare(
                 'INSERT INTO couriers (full_name, phone, vehicle_type, plate, is_active, created_by)
@@ -66,6 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Kurye bulunamadi.');
             }
 
+            if (mx_column_exists('courier_requests', 'assigned_courier_id')) {
+                $pdo->prepare('UPDATE courier_requests SET assigned_courier_id = NULL WHERE assigned_courier_id = :id')->execute([':id' => $id]);
+            }
             $pdo->prepare('DELETE FROM couriers WHERE id = :id')->execute([':id' => $id]);
             mx_audit_log(null, 'courier_delete', $courier['full_name'] . ' kuryesi silindi. Telefon: ' . $courier['phone']);
             $message = 'Kurye silindi.';
@@ -237,7 +249,7 @@ if (mx_table_exists('couriers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-logo-refresh">
+    <link rel="stylesheet" href="../styles.css?v=20260520-panel-fixes">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -292,7 +304,14 @@ if (mx_table_exists('couriers')) {
           <div class="panel-edit-grid panel-edit-grid-compact">
             <label>Ad soyad <input name="courier_full_name" required></label>
             <label>Telefon <input name="courier_phone" inputmode="tel" placeholder="05..." required></label>
-            <label>Araç tipi <input name="vehicle_type" placeholder="Motor, araç..."></label>
+            <label>Araç tipi
+              <select name="vehicle_type" required>
+                <option value="">Seçiniz</option>
+                <?php foreach ($courierVehicleOptions as $key => $label): ?>
+                  <option value="<?= mx_h($key) ?>"><?= mx_h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
             <label>Plaka <input name="plate" placeholder="Opsiyonel"></label>
           </div>
           <button class="btn btn-primary" type="submit">Kurye Ekle</button>

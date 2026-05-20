@@ -2790,6 +2790,18 @@ h3 {
   border-color: #f2c6c0;
 }
 
+.panel-body .panel-icon-btn.edit-action {
+  color: #24495c;
+  background: #eef4f6;
+  border-color: #dbe7eb;
+}
+
+.panel-body .panel-icon-btn.edit-action:hover {
+  color: #fff;
+  background: var(--navy);
+  border-color: var(--navy);
+}
+
 .panel-body .courier-dispatch-btn {
   color: #24495c !important;
   background: #e8f3f5;
@@ -2820,6 +2832,25 @@ h3 {
 
 .panel-body .courier-table {
   min-width: 620px;
+}
+
+.panel-body .courier-create-card {
+  justify-content: space-between;
+}
+
+.panel-body .courier-create-card .panel-edit-grid {
+  align-items: end;
+}
+
+.panel-body .courier-create-card select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: var(--navy);
+  background: #fff;
+  border: 1px solid #dbe2e7;
+  border-radius: 8px;
+  font: inherit;
 }
 
 .panel-body .compact-table-wrap .panel-table th,
