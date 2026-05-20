@@ -291,7 +291,7 @@ if (mx_table_exists('couriers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-mobile-menu-panel">
+    <link rel="stylesheet" href="../styles.css?v=20260521-customer-portal">
   </head>
   <body class="panel-body">
     <main class="panel-shell">

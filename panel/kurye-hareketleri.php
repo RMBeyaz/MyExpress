@@ -48,7 +48,7 @@ $statuses = mx_statuses();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($courier['full_name']) ?> | Kurye Hareketleri</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-mobile-menu-panel">
+    <link rel="stylesheet" href="../styles.css?v=20260521-customer-portal">
   </head>
   <body class="panel-body">
     <main class="panel-shell">

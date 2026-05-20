@@ -219,6 +219,90 @@ function mx_panel_require_login()
     }
 }
 
+function mx_customer_login(string $email, string $password): bool
+{
+    try {
+        if (!mx_table_exists('customers')) {
+            return false;
+        }
+
+        $stmt = mx_pdo()->prepare(
+            'SELECT id, full_name, email, password_hash, is_active FROM customers WHERE email = :email LIMIT 1'
+        );
+        $stmt->execute([':email' => $email]);
+        $customer = $stmt->fetch();
+
+        if (!$customer || (int) $customer['is_active'] !== 1 || !password_verify($password, (string) $customer['password_hash'])) {
+            return false;
+        }
+
+        session_regenerate_id(true);
+        $_SESSION['mx_customer_auth'] = true;
+        $_SESSION['mx_customer_id'] = (int) $customer['id'];
+        $_SESSION['mx_customer_email'] = (string) $customer['email'];
+        $_SESSION['mx_customer_name'] = (string) $customer['full_name'];
+        $_SESSION['mx_customer_last_activity'] = time();
+
+        mx_pdo()->prepare('UPDATE customers SET last_login_at = NOW() WHERE id = :id')->execute([
+            ':id' => (int) $customer['id'],
+        ]);
+
+        return true;
+    } catch (Throwable $error) {
+        mx_log_error('customer login failed', $error, ['email' => $email]);
+        return false;
+    }
+}
+
+function mx_customer_is_logged_in(): bool
+{
+    if (!isset($_SESSION['mx_customer_auth']) || $_SESSION['mx_customer_auth'] !== true) {
+        return false;
+    }
+
+    $ttl = (int) (mx_config()['customer_session_ttl'] ?? 86400);
+    $lastActivity = (int) ($_SESSION['mx_customer_last_activity'] ?? 0);
+
+    if ($lastActivity > 0 && time() - $lastActivity > $ttl) {
+        mx_customer_logout();
+        return false;
+    }
+
+    $_SESSION['mx_customer_last_activity'] = time();
+    return true;
+}
+
+function mx_customer_require_login()
+{
+    if (!mx_customer_is_logged_in()) {
+        header('Location: giris.php');
+        exit;
+    }
+}
+
+function mx_customer_logout(): void
+{
+    foreach ([
+        'mx_customer_auth',
+        'mx_customer_id',
+        'mx_customer_email',
+        'mx_customer_name',
+        'mx_customer_last_activity',
+    ] as $key) {
+        unset($_SESSION[$key]);
+    }
+}
+
+function mx_customer_id(): ?int
+{
+    return mx_customer_is_logged_in() ? (int) $_SESSION['mx_customer_id'] : null;
+}
+
+function mx_customer_name(): string
+{
+    return (string) ($_SESSION['mx_customer_name'] ?? '');
+}
+
 function mx_statuses(): array
 {
     return [

@@ -9,6 +9,7 @@ const detailForm = document.querySelector('[data-detail-form]');
 const scheduleFields = document.querySelector('[data-schedule-fields]');
 const scheduleDateField = document.querySelector('[data-schedule-date]');
 const scheduleTimeFields = document.querySelectorAll('[data-schedule-time]');
+const accountAddressForm = document.querySelector('[data-account-address-form]');
 const addressSearchTimers = new WeakMap();
 
 if (header && !menuToggle) {
@@ -763,6 +764,24 @@ detailForm?.addEventListener('submit', (event) => {
 });
 
 fillDetailFormFromParams();
+
+accountAddressForm?.addEventListener('submit', (event) => {
+  const areaInput = accountAddressForm.elements.area;
+  const latInput = accountAddressForm.elements.lat;
+  const lngInput = accountAddressForm.elements.lng;
+  const selectedArea = selectedLocationForInput(areaInput);
+
+  if (!selectedArea) {
+    event.preventDefault();
+    setFieldError(areaInput, 'Bölgeyi listeden seçin.');
+    areaInput.reportValidity();
+    return;
+  }
+
+  setFieldError(areaInput, '');
+  latInput.value = selectedArea.lat;
+  lngInput.value = selectedArea.lng;
+});
 updateScheduleFields();
 updateDetailEstimate();
 if (priceEstimate || detailPriceEstimate) {

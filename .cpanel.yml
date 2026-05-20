@@ -5,6 +5,7 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R assets $DEPLOYPATH
     - /bin/cp -R api $DEPLOYPATH
+    - /bin/cp -R hesabim $DEPLOYPATH
     - /bin/cp -R hizmetler $DEPLOYPATH
     - /bin/cp -R migrations $DEPLOYPATH
     - /bin/cp -R panel $DEPLOYPATH

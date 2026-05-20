@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+session_start();
 require __DIR__ . '/bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -77,6 +78,8 @@ try {
     $trackingCode = 'MXTMP' . strtoupper(bin2hex(random_bytes(5)));
     $priceResult = mx_calculate_price($payload);
     $pdo = mx_pdo();
+    $customerId = mx_customer_is_logged_in() ? mx_customer_id() : null;
+    $hasCustomerColumn = mx_column_exists('courier_requests', 'customer_id');
     $addressColumns = [
         'pickup_city' => ['payload' => 'pickupCity', 'max' => 80],
         'pickup_district' => ['payload' => 'pickupDistrict', 'max' => 80],
@@ -157,16 +160,19 @@ try {
     $pdo->beginTransaction();
 
     $stage = 'insert-request';
+    $customerColumnSql = $hasCustomerColumn ? 'customer_id, ' : '';
+    $customerValueSql = $hasCustomerColumn ? ':customer_id, ' : '';
+    $customerParams = $hasCustomerColumn ? [':customer_id' => $customerId] : [];
     $stmt = $pdo->prepare(
         'INSERT INTO courier_requests (
-            tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
+            ' . $customerColumnSql . 'tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
             dropoff, dropoff_lat, dropoff_lng, dropoff_street' . $extraColumnsSql . ',
             service, service_label, package_type, package_label, delivery_time, note, price, distance_km,
             sender_name, sender_phone, sender_email, sender_tckn,
             recipient_name, recipient_phone, recipient_email, recipient_tckn,
             service_agreement_accepted, kvkk_accepted, ip_address, user_agent
         ) VALUES (
-            :tracking_code, :status, :pickup, :pickup_lat, :pickup_lng, :pickup_street,
+            ' . $customerValueSql . ':tracking_code, :status, :pickup, :pickup_lat, :pickup_lng, :pickup_street,
             :dropoff, :dropoff_lat, :dropoff_lng, :dropoff_street' . $extraValuesSql . ',
             :service, :service_label, :package_type, :package_label, :delivery_time, :note, :price, :distance_km,
             :sender_name, :sender_phone, :sender_email, :sender_tckn,
@@ -206,7 +212,7 @@ try {
         ':kvkk_accepted' => 1,
         ':ip_address' => mx_clean_string($_SERVER['REMOTE_ADDR'] ?? '', 45),
         ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
-    ] + $extraParams);
+    ] + $customerParams + $extraParams);
 
     $requestId = (int) $pdo->lastInsertId();
     $trackingCode = mx_tracking_code_for_id($requestId);
