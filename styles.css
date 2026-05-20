@@ -2755,6 +2755,16 @@ h3 {
   flex-direction: column;
 }
 
+.request-detail-page .panel-header h1 {
+  font-size: clamp(24px, 2.8vw, 36px);
+  line-height: 1.05;
+}
+
+.request-detail-page .panel-header-actions .panel-status {
+  border: 1px solid currentColor;
+  box-shadow: 0 0 0 3px rgba(11, 34, 54, 0.05);
+}
+
 .request-detail-page .panel-edit-form {
   order: 2;
   margin-bottom: 16px;
@@ -2824,6 +2834,24 @@ h3 {
 .panel-body .panel-edit-grid-address label:nth-child(n+3),
 .panel-body .panel-edit-grid-notes label {
   grid-column: span 1;
+}
+
+.panel-body .edit-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #dde4e9;
+}
+
+.panel-body .edit-confirm-actions .btn:disabled {
+  color: #7a8792;
+  background: #e4e9ed;
+  border-color: #d5dde3;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 1;
 }
 
 .panel-body .panel-edit-form input,

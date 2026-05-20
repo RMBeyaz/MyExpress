@@ -208,7 +208,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-logo-refresh">
+    <link rel="stylesheet" href="../styles.css?v=20260520-detail-actions">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -289,7 +289,6 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
           <h2>Talep Bilgileri</h2>
           <div class="panel-header-actions">
             <button class="btn btn-secondary" type="button" data-edit-toggle>Düzenle</button>
-            <button class="btn btn-primary" type="submit" data-save-edit hidden>Değişiklikleri Kaydet</button>
           </div>
         </div>
         <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
@@ -366,6 +365,10 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
               <label>Talep notu <textarea name="note" readonly><?= mx_h($request['note']) ?></textarea></label>
               <label>Değişiklik notu <textarea name="change_note" placeholder="Adres düzeltildi, telefon güncellendi..." readonly></textarea></label>
             </div>
+            <div class="edit-confirm-actions">
+              <button class="btn btn-primary" type="submit" data-save-edit disabled>Değişiklikleri Kaydet</button>
+              <button class="btn btn-secondary" type="button" data-cancel-edit disabled>Vazgeç</button>
+            </div>
           </section>
         </div>
       </form>
@@ -396,12 +399,28 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         </div>
       </form>
     </div>
+    <div class="panel-modal" data-edit-confirm-modal hidden>
+      <div class="panel-modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-confirm-title">
+        <h2 id="edit-confirm-title" data-edit-confirm-title>İşlemi Onayla</h2>
+        <p data-edit-confirm-text>Bu işlem için onay gerekiyor.</p>
+        <div class="panel-modal-actions">
+          <button class="btn btn-secondary" type="button" data-edit-confirm-close>Vazgeç</button>
+          <button class="btn btn-primary" type="button" data-edit-confirm-approve>Onayla</button>
+        </div>
+      </div>
+    </div>
     <script>
       const pricingConfig = <?= json_encode($pricing, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
       const editForm = document.querySelector('[data-panel-edit-form]');
       const editToggle = document.querySelector('[data-edit-toggle]');
       const saveButton = document.querySelector('[data-save-edit]');
+      const cancelEditButton = document.querySelector('[data-cancel-edit]');
       const deleteModal = document.querySelector('[data-delete-modal]');
+      const editConfirmModal = document.querySelector('[data-edit-confirm-modal]');
+      const editConfirmTitle = document.querySelector('[data-edit-confirm-title]');
+      const editConfirmText = document.querySelector('[data-edit-confirm-text]');
+      const editConfirmApprove = document.querySelector('[data-edit-confirm-approve]');
+      const editConfirmClose = document.querySelector('[data-edit-confirm-close]');
       const distanceButton = document.querySelector('[data-distance-calculate]');
       const distanceInput = document.querySelector('[data-distance-input]');
       const priceInput = document.querySelector('[data-price-input]');
@@ -411,6 +430,21 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       const pickupLng = document.querySelector('[data-pickup-lng]');
       const dropoffLat = document.querySelector('[data-dropoff-lat]');
       const dropoffLng = document.querySelector('[data-dropoff-lng]');
+      let editSubmitApproved = false;
+      let pendingConfirmAction = null;
+
+      const openEditConfirm = ({ title, text, approveText, action }) => {
+        pendingConfirmAction = action;
+        if (editConfirmTitle) editConfirmTitle.textContent = title;
+        if (editConfirmText) editConfirmText.textContent = text;
+        if (editConfirmApprove) editConfirmApprove.textContent = approveText;
+        if (editConfirmModal) editConfirmModal.hidden = false;
+      };
+
+      const closeEditConfirm = () => {
+        pendingConfirmAction = null;
+        if (editConfirmModal) editConfirmModal.hidden = true;
+      };
 
       const earthDistance = (from, to) => {
         const radius = 6371;
@@ -515,10 +549,43 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         editForm?.querySelectorAll('input[readonly], textarea[readonly]').forEach((field) => field.removeAttribute('readonly'));
         editForm?.querySelectorAll('select[disabled], button[disabled]').forEach((field) => field.removeAttribute('disabled'));
         editToggle.hidden = true;
-        if (saveButton) saveButton.hidden = false;
       });
-      editForm?.addEventListener('submit', () => {
+      editForm?.addEventListener('submit', (event) => {
+        if (!editSubmitApproved) {
+          event.preventDefault();
+          openEditConfirm({
+            title: 'Değişiklikler kaydedilsin mi?',
+            text: 'Talep üzerindeki düzenlemeler kaydedilecek ve işlem kayıtlarına yazılacak.',
+            approveText: 'Evet, Kaydet',
+            action: 'save',
+          });
+          return;
+        }
         editForm.querySelectorAll('select[disabled], button[disabled]').forEach((field) => field.removeAttribute('disabled'));
+      });
+      cancelEditButton?.addEventListener('click', () => {
+        openEditConfirm({
+          title: 'Değişiklikler iptal edilsin mi?',
+          text: 'Kaydedilmemiş değişiklikler silinecek ve talep eski haliyle gösterilecek.',
+          approveText: 'Evet, İptal Et',
+          action: 'cancel',
+        });
+      });
+      editConfirmApprove?.addEventListener('click', () => {
+        if (pendingConfirmAction === 'save') {
+          editSubmitApproved = true;
+          closeEditConfirm();
+          editForm?.requestSubmit();
+          return;
+        }
+        if (pendingConfirmAction === 'cancel') {
+          closeEditConfirm();
+          window.location.reload();
+        }
+      });
+      editConfirmClose?.addEventListener('click', closeEditConfirm);
+      editConfirmModal?.addEventListener('click', (event) => {
+        if (event.target === editConfirmModal) closeEditConfirm();
       });
       distanceInput?.addEventListener('change', () => updateSuggestedPrice(false));
       editForm?.querySelectorAll('[data-priced-field]').forEach((field) => {
