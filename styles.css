@@ -481,6 +481,11 @@ h3 {
   gap: 16px;
 }
 
+.address-parts-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .schedule-grid {
   margin-top: 2px;
   padding: 12px;

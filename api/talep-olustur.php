@@ -14,7 +14,13 @@ try {
     $required = [
         'pickup' => 'Alim mahallesi',
         'dropoff' => 'Teslim mahallesi',
+        'pickupCity' => 'Alim sehri',
+        'pickupDistrict' => 'Alim ilcesi',
+        'pickupRoad' => 'Alim cadde/sokak',
         'pickupStreet' => 'Alim acik adresi',
+        'dropoffCity' => 'Teslim sehri',
+        'dropoffDistrict' => 'Teslim ilcesi',
+        'dropoffRoad' => 'Teslim cadde/sokak',
         'dropoffStreet' => 'Teslim acik adresi',
         'senderName' => 'Gonderici ad soyad',
         'senderPhone' => 'Gonderici telefon',
@@ -77,20 +83,69 @@ try {
     $trackingCode = 'MXTMP' . strtoupper(bin2hex(random_bytes(5)));
     $priceResult = mx_calculate_price($payload);
     $pdo = mx_pdo();
+    $addressColumns = [
+        'pickup_city' => ['payload' => 'pickupCity', 'max' => 80],
+        'pickup_district' => ['payload' => 'pickupDistrict', 'max' => 80],
+        'pickup_road' => ['payload' => 'pickupRoad', 'max' => 160],
+        'pickup_building_no' => ['payload' => 'pickupBuildingNo', 'max' => 80],
+        'dropoff_city' => ['payload' => 'dropoffCity', 'max' => 80],
+        'dropoff_district' => ['payload' => 'dropoffDistrict', 'max' => 80],
+        'dropoff_road' => ['payload' => 'dropoffRoad', 'max' => 160],
+        'dropoff_building_no' => ['payload' => 'dropoffBuildingNo', 'max' => 80],
+    ];
+    $availableAddressColumns = [];
+    foreach ($addressColumns as $column => $meta) {
+        if (mx_column_exists('courier_requests', $column)) {
+            $availableAddressColumns[$column] = $meta;
+        }
+    }
+    $addressColumnsReady = count($availableAddressColumns) === count($addressColumns);
+    $buildAddressText = static function (string $prefix) use ($payload): string {
+        $labels = [
+            'City' => 'Şehir',
+            'District' => 'İlçe',
+            'Road' => 'Cadde/Sokak',
+            'BuildingNo' => 'Bina/Kapı No',
+        ];
+        $lines = [];
+        foreach ($labels as $suffix => $label) {
+            $value = mx_clean_string($payload[$prefix . $suffix] ?? '', $suffix === 'Road' ? 160 : 80);
+            if ($value !== '') {
+                $lines[] = $label . ': ' . $value;
+            }
+        }
+        $detail = mx_clean_text($payload[$prefix . 'Street'] ?? '', 1000);
+        if ($detail !== '') {
+            $lines[] = 'Adres tarifi: ' . $detail;
+        }
+        return implode("\n", $lines);
+    };
+    $pickupStreet = $addressColumnsReady ? mx_clean_text($payload['pickupStreet'], 1000) : $buildAddressText('pickup');
+    $dropoffStreet = $addressColumnsReady ? mx_clean_text($payload['dropoffStreet'], 1000) : $buildAddressText('dropoff');
+    $extraColumnsSql = '';
+    $extraValuesSql = '';
+    $extraParams = [];
+    if ($availableAddressColumns) {
+        $extraColumnsSql = ', ' . implode(', ', array_keys($availableAddressColumns));
+        $extraValuesSql = ', :' . implode(', :', array_keys($availableAddressColumns));
+        foreach ($availableAddressColumns as $column => $meta) {
+            $extraParams[':' . $column] = mx_clean_string($payload[$meta['payload']] ?? '', (int) $meta['max']);
+        }
+    }
     $pdo->beginTransaction();
 
     $stage = 'insert-request';
     $stmt = $pdo->prepare(
         'INSERT INTO courier_requests (
             tracking_code, status, pickup, pickup_lat, pickup_lng, pickup_street,
-            dropoff, dropoff_lat, dropoff_lng, dropoff_street,
+            dropoff, dropoff_lat, dropoff_lng, dropoff_street' . $extraColumnsSql . ',
             service, service_label, package_type, package_label, delivery_time, note, price, distance_km,
             sender_name, sender_phone, sender_email, sender_tckn,
             recipient_name, recipient_phone, recipient_email, recipient_tckn,
             service_agreement_accepted, kvkk_accepted, ip_address, user_agent
         ) VALUES (
             :tracking_code, :status, :pickup, :pickup_lat, :pickup_lng, :pickup_street,
-            :dropoff, :dropoff_lat, :dropoff_lng, :dropoff_street,
+            :dropoff, :dropoff_lat, :dropoff_lng, :dropoff_street' . $extraValuesSql . ',
             :service, :service_label, :package_type, :package_label, :delivery_time, :note, :price, :distance_km,
             :sender_name, :sender_phone, :sender_email, :sender_tckn,
             :recipient_name, :recipient_phone, :recipient_email, :recipient_tckn,
@@ -104,11 +159,11 @@ try {
         ':pickup' => mx_clean_string($payload['pickup'], 255),
         ':pickup_lat' => is_numeric($payload['pickupLat'] ?? null) ? (float) $payload['pickupLat'] : null,
         ':pickup_lng' => is_numeric($payload['pickupLng'] ?? null) ? (float) $payload['pickupLng'] : null,
-        ':pickup_street' => mx_clean_text($payload['pickupStreet'], 1000),
+        ':pickup_street' => $pickupStreet,
         ':dropoff' => mx_clean_string($payload['dropoff'], 255),
         ':dropoff_lat' => is_numeric($payload['dropoffLat'] ?? null) ? (float) $payload['dropoffLat'] : null,
         ':dropoff_lng' => is_numeric($payload['dropoffLng'] ?? null) ? (float) $payload['dropoffLng'] : null,
-        ':dropoff_street' => mx_clean_text($payload['dropoffStreet'], 1000),
+        ':dropoff_street' => $dropoffStreet,
         ':service' => mx_clean_string($payload['service'], 40),
         ':service_label' => mx_clean_string($payload['serviceLabel'] ?? $payload['service'], 80),
         ':package_type' => mx_clean_string($payload['packageType'], 40),
@@ -129,7 +184,7 @@ try {
         ':kvkk_accepted' => 1,
         ':ip_address' => mx_clean_string($_SERVER['REMOTE_ADDR'] ?? '', 45),
         ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
-    ]);
+    ] + $extraParams);
 
     $requestId = (int) $pdo->lastInsertId();
     $trackingCode = mx_tracking_code_for_id($requestId);

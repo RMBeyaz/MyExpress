@@ -185,7 +185,7 @@ if (!mx_table_exists('panel_users')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-request-page-links">
+    <link rel="stylesheet" href="../styles.css?v=20260520-address-details">
   </head>
   <body class="panel-body">
     <main class="panel-shell">

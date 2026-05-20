@@ -327,12 +327,23 @@ const closeAutocomplete = (input) => {
   if (list) list.innerHTML = '';
 };
 
+const districtFromDisplay = (display) => {
+  const parts = String(display || '').split(',').map((part) => part.trim()).filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 1] : '';
+};
+
 const selectLocation = (input, location) => {
   input.value = location.display;
   input.dataset.selectedLabel = location.display;
   input.dataset.selectedLat = String(location.lat);
   input.dataset.selectedLng = String(location.lng);
   input.dataset.selectedType = location.type;
+  if (detailForm && input.form === detailForm && ['pickup', 'dropoff'].includes(input.name)) {
+    const cityInput = detailForm.elements[`${input.name}City`];
+    const districtInput = detailForm.elements[`${input.name}District`];
+    if (cityInput && !cityInput.value.trim()) cityInput.value = 'İstanbul';
+    if (districtInput && !districtInput.value.trim()) districtInput.value = districtFromDisplay(location.display);
+  }
   addressInputs.forEach(closeAutocomplete);
   window.setTimeout(() => input.blur(), 0);
   updatePriceEstimate();
@@ -601,6 +612,10 @@ const fillDetailFormFromParams = () => {
       input.dataset.selectedLat = lat;
       input.dataset.selectedLng = lng;
       input.dataset.selectedType = 'Mahalle/Semt';
+      const cityInput = detailForm.elements[`${name}City`];
+      const districtInput = detailForm.elements[`${name}District`];
+      if (cityInput && !cityInput.value.trim()) cityInput.value = 'İstanbul';
+      if (districtInput && !districtInput.value.trim()) districtInput.value = districtFromDisplay(input.value);
     }
   });
 };

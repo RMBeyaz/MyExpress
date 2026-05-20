@@ -54,6 +54,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id > 0 && $action === 'details') {
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
         $setDistance = $hasDistance ? ', distance_km = :distance_km' : '';
+        $addressColumns = [
+            'pickup_city' => ['post' => 'pickup_city', 'max' => 80],
+            'pickup_district' => ['post' => 'pickup_district', 'max' => 80],
+            'pickup_road' => ['post' => 'pickup_road', 'max' => 160],
+            'pickup_building_no' => ['post' => 'pickup_building_no', 'max' => 80],
+            'dropoff_city' => ['post' => 'dropoff_city', 'max' => 80],
+            'dropoff_district' => ['post' => 'dropoff_district', 'max' => 80],
+            'dropoff_road' => ['post' => 'dropoff_road', 'max' => 160],
+            'dropoff_building_no' => ['post' => 'dropoff_building_no', 'max' => 80],
+        ];
+        $setAddressColumns = '';
+        $addressParams = [];
+        foreach ($addressColumns as $column => $meta) {
+            if (mx_column_exists('courier_requests', $column)) {
+                $setAddressColumns .= ', ' . $column . ' = :' . $column;
+                $addressParams[':' . $column] = mx_clean_string($_POST[$meta['post']] ?? '', (int) $meta['max']);
+            }
+        }
         $pricing = mx_pricing_settings();
         $service = mx_clean_string($_POST['service'] ?? 'normal', 40);
         $packageType = mx_clean_string($_POST['package_type'] ?? 'evrak', 40);
@@ -62,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare(
             "UPDATE courier_requests SET
                 pickup = :pickup, pickup_lat = :pickup_lat, pickup_lng = :pickup_lng, pickup_street = :pickup_street,
-                dropoff = :dropoff, dropoff_lat = :dropoff_lat, dropoff_lng = :dropoff_lng, dropoff_street = :dropoff_street,
+                dropoff = :dropoff, dropoff_lat = :dropoff_lat, dropoff_lng = :dropoff_lng, dropoff_street = :dropoff_street{$setAddressColumns},
                 service = :service, service_label = :service_label, package_type = :package_type, package_label = :package_label,
                 delivery_time = :delivery_time, note = :note, price = :price{$setDistance},
                 sender_name = :sender_name, sender_phone = :sender_phone, sender_email = :sender_email, sender_tckn = :sender_tckn,
@@ -94,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':recipient_email' => mx_clean_string($_POST['recipient_email'] ?? '', 160),
             ':recipient_tckn' => preg_replace('/\D/', '', (string) ($_POST['recipient_tckn'] ?? '')),
             ':id' => $id,
-        ];
+        ] + $addressParams;
         if ($hasDistance) {
             $params[':distance_km'] = is_numeric($_POST['distance_km'] ?? null) ? (float) $_POST['distance_km'] : null;
         }
@@ -148,7 +166,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-request-page-links">
+    <link rel="stylesheet" href="../styles.css?v=20260520-address-details">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -247,8 +265,16 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
             <div class="panel-edit-grid panel-edit-grid-address">
               <label>Alım bölgesi <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly></label>
               <label>Teslim bölgesi <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly></label>
-              <label>Alım açık adres <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
-              <label>Teslim açık adres <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
+              <label>Alım şehir <input name="pickup_city" value="<?= mx_h($request['pickup_city'] ?? 'İstanbul') ?>" required readonly></label>
+              <label>Teslim şehir <input name="dropoff_city" value="<?= mx_h($request['dropoff_city'] ?? 'İstanbul') ?>" required readonly></label>
+              <label>Alım ilçe <input name="pickup_district" value="<?= mx_h($request['pickup_district'] ?? '') ?>" required readonly></label>
+              <label>Teslim ilçe <input name="dropoff_district" value="<?= mx_h($request['dropoff_district'] ?? '') ?>" required readonly></label>
+              <label>Alım cadde / sokak <input name="pickup_road" value="<?= mx_h($request['pickup_road'] ?? '') ?>" required readonly></label>
+              <label>Teslim cadde / sokak <input name="dropoff_road" value="<?= mx_h($request['dropoff_road'] ?? '') ?>" required readonly></label>
+              <label>Alım bina / kapı no <input name="pickup_building_no" value="<?= mx_h($request['pickup_building_no'] ?? '') ?>" readonly></label>
+              <label>Teslim bina / kapı no <input name="dropoff_building_no" value="<?= mx_h($request['dropoff_building_no'] ?? '') ?>" readonly></label>
+              <label>Alım adres tarifi <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
+              <label>Teslim adres tarifi <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
             </div>
           </section>
           <section class="panel-edit-section">
@@ -375,6 +401,13 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         return { lat: Number(results[0].lat), lng: Number(results[0].lon) };
       };
 
+      const panelAddressQuery = (prefix) => [
+        editForm?.elements[`${prefix}_road`]?.value,
+        editForm?.elements[prefix]?.value,
+        editForm?.elements[`${prefix}_district`]?.value,
+        editForm?.elements[`${prefix}_city`]?.value,
+      ].filter(Boolean).join(', ');
+
       const calculatePanelDistance = async () => {
         if (!pickupInput?.value || !dropoffInput?.value || !distanceInput) return;
         const originalText = distanceButton?.textContent || 'KM Hesapla';
@@ -384,8 +417,8 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         }
         try {
           const [pickupLocation, dropoffLocation] = await Promise.all([
-            geocodePanelAddress(pickupInput.value),
-            geocodePanelAddress(dropoffInput.value),
+            geocodePanelAddress(panelAddressQuery('pickup')),
+            geocodePanelAddress(panelAddressQuery('dropoff')),
           ]);
           const raw = earthDistance(pickupLocation, dropoffLocation);
           const sameArea = pickupInput.value.trim() === dropoffInput.value.trim();
