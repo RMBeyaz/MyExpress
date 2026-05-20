@@ -51,6 +51,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mx_audit_log($id, 'status_update', 'Durum ' . mx_status_label($status) . ' olarak guncellendi. Not: ' . $note);
     }
 
+    if ($id > 0 && $action === 'assign_courier') {
+        if (!mx_table_exists('couriers') || !mx_column_exists('courier_requests', 'assigned_courier_id')) {
+            header('Location: talep.php?id=' . $id);
+            exit;
+        }
+
+        $courierId = (int) ($_POST['courier_id'] ?? 0);
+        if ($courierId > 0) {
+            $courierStmt = $pdo->prepare('SELECT full_name, phone FROM couriers WHERE id = :id AND is_active = 1');
+            $courierStmt->execute([':id' => $courierId]);
+            $courier = $courierStmt->fetch();
+            if ($courier) {
+                $pdo->beginTransaction();
+                $pdo->prepare("UPDATE courier_requests SET assigned_courier_id = :courier_id, status = 'assigned' WHERE id = :id")->execute([
+                    ':courier_id' => $courierId,
+                    ':id' => $id,
+                ]);
+                $pdo->prepare('INSERT INTO request_status_logs (request_id, status, note) VALUES (:id, :status, :note)')->execute([
+                    ':id' => $id,
+                    ':status' => 'assigned',
+                    ':note' => 'Kurye atandı: ' . $courier['full_name'] . ' (' . $courier['phone'] . ')',
+                ]);
+                $pdo->commit();
+                mx_audit_log($id, 'courier_assign', $courier['full_name'] . ' kuryesi atandi. Telefon: ' . $courier['phone']);
+            }
+        } else {
+            $pdo->prepare('UPDATE courier_requests SET assigned_courier_id = NULL WHERE id = :id')->execute([':id' => $id]);
+            mx_audit_log($id, 'courier_unassign', 'Kurye atamasi kaldirildi.');
+        }
+    }
+
     if ($id > 0 && $action === 'details') {
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
         $setDistance = $hasDistance ? ', distance_km = :distance_km' : '';
@@ -146,6 +177,17 @@ if (mx_table_exists('request_audit_logs')) {
 }
 
 $statuses = mx_statuses();
+$hasCourierAssignment = mx_table_exists('couriers') && mx_column_exists('courier_requests', 'assigned_courier_id');
+$couriers = [];
+$assignedCourier = null;
+if ($hasCourierAssignment) {
+    $couriers = $pdo->query('SELECT id, full_name, phone, vehicle_type, plate FROM couriers WHERE is_active = 1 ORDER BY full_name')->fetchAll();
+    if (!empty($request['assigned_courier_id'])) {
+        $assignedStmt = $pdo->prepare('SELECT id, full_name, phone, vehicle_type, plate FROM couriers WHERE id = :id');
+        $assignedStmt->execute([':id' => (int) $request['assigned_courier_id']]);
+        $assignedCourier = $assignedStmt->fetch() ?: null;
+    }
+}
 $pricing = mx_pricing_settings();
 $serviceOptions = $pricing['services'];
 $packageOptions = array_intersect_key($pricing['packages'], array_flip(['evrak', 'kucuk', 'orta', 'buyuk', 'motorDisi']));
@@ -166,7 +208,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-address-details">
+    <link rel="stylesheet" href="../styles.css?v=20260520-courier-dispatch">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -202,6 +244,34 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
             İç not
             <textarea name="note" placeholder="Arandı, ulaşılamadı, kurye atandı..."></textarea>
           </label>
+        </form>
+
+        <form class="panel-card courier-assignment-card" method="post">
+          <h2>Kurye Atama</h2>
+          <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
+          <input type="hidden" name="action" value="assign_courier">
+          <?php if ($hasCourierAssignment): ?>
+            <div class="status-update-row">
+              <label>
+                Kurye
+                <select name="courier_id">
+                  <option value="0">Kurye seçilmedi</option>
+                  <?php foreach ($couriers as $courier): ?>
+                    <option value="<?= (int) $courier['id'] ?>" <?= (int) ($request['assigned_courier_id'] ?? 0) === (int) $courier['id'] ? 'selected' : '' ?>>
+                      <?= mx_h($courier['full_name']) ?> · <?= mx_h($courier['phone']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <button class="btn btn-primary" type="submit">Kuryeyi Ata</button>
+            </div>
+            <?php if ($assignedCourier): ?>
+              <p class="courier-current"><strong>Atanan kurye:</strong> <?= mx_h($assignedCourier['full_name']) ?> · <a href="tel:<?= mx_h($assignedCourier['phone']) ?>"><?= mx_h($assignedCourier['phone']) ?></a></p>
+            <?php endif; ?>
+            <p class="panel-help-text">Kurye seçildiğinde talep durumu otomatik olarak “Kurye Atandı” olur.</p>
+          <?php else: ?>
+            <p class="panel-alert">Kurye ataması için önce <code>migrations/006_couriers.sql</code> çalıştırılmalı.</p>
+          <?php endif; ?>
         </form>
 
         <article class="panel-card">

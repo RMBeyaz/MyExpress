@@ -37,9 +37,11 @@ $checks = [
         'request_audit_logs' => false,
         'pricing_settings' => false,
         'panel_users' => false,
+        'couriers' => false,
     ],
     'columns' => [
         'courier_requests.distance_km' => false,
+        'courier_requests.assigned_courier_id' => false,
         'courier_requests.pickup_city' => false,
         'courier_requests.pickup_district' => false,
         'courier_requests.pickup_road' => false,
@@ -86,6 +88,7 @@ try {
         $checks['tables'][$table] = (int) $stmt->fetchColumn() === 1;
     }
     $checks['columns']['courier_requests.distance_km'] = mx_column_exists('courier_requests', 'distance_km');
+    $checks['columns']['courier_requests.assigned_courier_id'] = mx_column_exists('courier_requests', 'assigned_courier_id');
     foreach (['pickup_city', 'pickup_district', 'pickup_road', 'pickup_building_no', 'dropoff_city', 'dropoff_district', 'dropoff_road', 'dropoff_building_no'] as $column) {
         $checks['columns']['courier_requests.' . $column] = mx_column_exists('courier_requests', $column);
     }

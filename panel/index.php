@@ -109,6 +109,7 @@ if (mx_panel_is_logged_in()) {
     try {
         $pdo = mx_pdo();
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
+        $hasCourierAssignment = mx_table_exists('couriers') && mx_column_exists('courier_requests', 'assigned_courier_id');
         $sortMap = [
             'date' => 'created_at',
             'status' => 'status',
@@ -181,11 +182,21 @@ if (mx_panel_is_logged_in()) {
         }
 
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-        $distanceSelect = $hasDistance ? 'distance_km,' : 'NULL AS distance_km,';
-        $sql = "SELECT id, tracking_code, status, pickup, dropoff, price, {$distanceSelect}
-                   sender_name, sender_phone, recipient_name, recipient_phone, created_at
-                FROM courier_requests{$whereSql}
-                ORDER BY {$sort} {$dir}
+        $distanceSelect = $hasDistance ? 'cr.distance_km,' : 'NULL AS distance_km,';
+        $courierSelect = $hasCourierAssignment ? ', c.full_name AS courier_name, c.phone AS courier_phone' : ", NULL AS courier_name, NULL AS courier_phone";
+        $courierJoin = $hasCourierAssignment ? ' LEFT JOIN couriers c ON c.id = cr.assigned_courier_id' : '';
+        $qualifiedWhereSql = $whereSql !== '' ? str_replace(
+            ['status ', 'created_at ', 'tracking_code ', 'sender_name ', 'recipient_name ', 'sender_phone ', 'recipient_phone ', 'pickup ', 'pickup_street ', 'dropoff ', 'dropoff_street '],
+            ['cr.status ', 'cr.created_at ', 'cr.tracking_code ', 'cr.sender_name ', 'cr.recipient_name ', 'cr.sender_phone ', 'cr.recipient_phone ', 'cr.pickup ', 'cr.pickup_street ', 'cr.dropoff ', 'cr.dropoff_street '],
+            $whereSql
+        ) : '';
+        $qualifiedSort = in_array($sortKey, ['date', 'status', 'tracking', 'sender', 'recipient'], true) || $sort === 'created_at'
+            ? 'cr.' . $sort
+            : str_replace(['price', 'distance_km'], ['cr.price', 'cr.distance_km'], $sort);
+        $sql = "SELECT cr.id, cr.tracking_code, cr.status, cr.pickup, cr.dropoff, cr.price, {$distanceSelect}
+                   cr.sender_name, cr.sender_phone, cr.recipient_name, cr.recipient_phone, cr.created_at{$courierSelect}
+                FROM courier_requests cr{$courierJoin}{$qualifiedWhereSql}
+                ORDER BY {$qualifiedSort} {$dir}
                 LIMIT 120";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -202,7 +213,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-address-details">
+    <link rel="stylesheet" href="../styles.css?v=20260520-courier-dispatch">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -287,11 +298,23 @@ if (mx_panel_is_logged_in()) {
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('distance')) ?>">Mesafe<?= mx_h($sortMark('distance')) ?></a></th>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('price')) ?>">Ücret<?= mx_h($sortMark('price')) ?></a></th>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('date')) ?>">Tarih<?= mx_h($sortMark('date')) ?></a></th>
+                  <th>Kurye</th>
                   <th>İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 <?php foreach ($requests as $request): ?>
+                  <?php
+                    $dispatchMessage = "MyExpress kurye görevi\n"
+                      . 'Talep No: ' . $request['tracking_code'] . "\n"
+                      . 'Durum: ' . mx_status_label($request['status']) . "\n"
+                      . 'Alım: ' . $request['pickup'] . "\n"
+                      . 'Teslim: ' . $request['dropoff'] . "\n"
+                      . 'Gönderici: ' . $request['sender_name'] . ' - ' . $request['sender_phone'] . "\n"
+                      . 'Alıcı: ' . $request['recipient_name'] . ' - ' . $request['recipient_phone'] . "\n"
+                      . 'Ücret: ' . $request['price'] . "\n"
+                      . 'Panel: https://www.myexpress.com.tr/kurye/panel/talep.php?id=' . (int) $request['id'];
+                  ?>
                   <tr class="request-row request-row-<?= mx_h($request['status']) ?>">
                     <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
                     <td><span class="person-name"><?= mx_h($request['sender_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['sender_phone'])) ?>" target="_blank" rel="noopener" aria-label="Gönderici WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['sender_phone']) ?>"><small><?= mx_h($request['sender_phone']) ?></small></a></td>
@@ -300,11 +323,19 @@ if (mx_panel_is_logged_in()) {
                     <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
                     <td><?= mx_h($request['price']) ?></td>
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
+                    <td>
+                      <?php if (!empty($request['courier_phone'])): ?>
+                        <a class="panel-icon-btn courier-dispatch-btn" href="<?= mx_h(mx_whatsapp_url((string) $request['courier_phone'], $dispatchMessage)) ?>" target="_blank" rel="noopener" title="<?= mx_h($request['courier_name']) ?> kuryesine ilet" aria-label="Kuryeye WhatsApp ile ilet">🏍</a>
+                        <small><?= mx_h($request['courier_name']) ?></small>
+                      <?php else: ?>
+                        <button class="panel-icon-btn courier-dispatch-btn is-disabled" type="button" data-courier-missing aria-label="Kurye atanmamış">🏍</button>
+                      <?php endif; ?>
+                    </td>
                     <td><button class="panel-icon-btn danger trash-action" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>" aria-label="Talebi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button></td>
                   </tr>
                 <?php endforeach; ?>
                 <?php if (!$requests): ?>
-                  <tr><td colspan="8">Henüz talep yok.</td></tr>
+                  <tr><td colspan="9">Henüz talep yok.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>
@@ -343,6 +374,9 @@ if (mx_panel_is_logged_in()) {
       });
       deleteModal?.addEventListener('click', (event) => {
         if (event.target === deleteModal) deleteModal.hidden = true;
+      });
+      document.querySelectorAll('[data-courier-missing]').forEach((button) => {
+        button.addEventListener('click', () => window.alert('Bu talebe henüz kurye atanmamış. Talep detayından kurye seçebilirsiniz.'));
       });
     </script>
   </body>

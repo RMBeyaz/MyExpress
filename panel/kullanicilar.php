@@ -23,6 +23,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('panel_users tablosu bulunamadi.');
         }
 
+        if ($action === 'create_courier') {
+            if (!mx_table_exists('couriers')) {
+                throw new RuntimeException('couriers tablosu bulunamadi. migrations/006_couriers.sql calistirilmali.');
+            }
+
+            $fullName = mx_clean_string($_POST['courier_full_name'] ?? '', 120);
+            $phone = mx_clean_string($_POST['courier_phone'] ?? '', 40);
+            $vehicleType = mx_clean_string($_POST['vehicle_type'] ?? '', 80);
+            $plate = mx_clean_string($_POST['plate'] ?? '', 40);
+
+            if ($fullName === '' || $phone === '') {
+                throw new RuntimeException('Kurye adi ve telefonu zorunludur.');
+            }
+
+            $stmt = $pdo->prepare(
+                'INSERT INTO couriers (full_name, phone, vehicle_type, plate, is_active, created_by)
+                 VALUES (:full_name, :phone, :vehicle_type, :plate, 1, :created_by)'
+            );
+            $stmt->execute([
+                ':full_name' => $fullName,
+                ':phone' => $phone,
+                ':vehicle_type' => $vehicleType,
+                ':plate' => $plate,
+                ':created_by' => mx_panel_user(),
+            ]);
+            mx_audit_log(null, 'courier_create', $fullName . ' kuryesi olusturuldu. Telefon: ' . $phone);
+            $message = 'Kurye eklendi.';
+        }
+
+        if ($action === 'delete_courier') {
+            if (!mx_table_exists('couriers')) {
+                throw new RuntimeException('couriers tablosu bulunamadi.');
+            }
+
+            $id = (int) ($_POST['id'] ?? 0);
+            $target = $pdo->prepare('SELECT full_name, phone FROM couriers WHERE id = :id');
+            $target->execute([':id' => $id]);
+            $courier = $target->fetch();
+
+            if (!$courier) {
+                throw new RuntimeException('Kurye bulunamadi.');
+            }
+
+            $pdo->prepare('DELETE FROM couriers WHERE id = :id')->execute([':id' => $id]);
+            mx_audit_log(null, 'courier_delete', $courier['full_name'] . ' kuryesi silindi. Telefon: ' . $courier['phone']);
+            $message = 'Kurye silindi.';
+        }
+
         if ($action === 'create') {
             $username = mx_clean_string($_POST['username'] ?? '', 80);
             $fullName = mx_clean_string($_POST['full_name'] ?? '', 120);
@@ -173,10 +221,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $users = [];
+$couriers = [];
 if (!mx_table_exists('panel_users')) {
     $error = 'panel_users tablosu yok. Önce migrations/004_panel_users.sql dosyasını phpMyAdmin üzerinden çalıştırın.';
 } else {
     $users = $pdo->query("SELECT id, username, full_name, role, is_active, last_login_at, created_at FROM panel_users WHERE role <> 'admin' ORDER BY role, username")->fetchAll();
+}
+if (mx_table_exists('couriers')) {
+    $couriers = $pdo->query('SELECT id, full_name, phone, vehicle_type, plate, is_active, created_at FROM couriers ORDER BY is_active DESC, full_name')->fetchAll();
 }
 ?>
 <!doctype html>
@@ -185,7 +237,7 @@ if (!mx_table_exists('panel_users')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-address-details">
+    <link rel="stylesheet" href="../styles.css?v=20260520-courier-dispatch">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -231,6 +283,52 @@ if (!mx_table_exists('panel_users')) {
             <dt>Çalışan</dt><dd>Talep listesi ve talep operasyon işlemleri.</dd>
           </dl>
         </article>
+      </section>
+
+      <section class="panel-detail-grid courier-management-grid">
+        <form class="panel-card user-create-card courier-create-card" method="post">
+          <h2>Yeni Kurye</h2>
+          <input type="hidden" name="action" value="create_courier">
+          <div class="panel-edit-grid panel-edit-grid-compact">
+            <label>Ad soyad <input name="courier_full_name" required></label>
+            <label>Telefon <input name="courier_phone" inputmode="tel" placeholder="05..." required></label>
+            <label>Araç tipi <input name="vehicle_type" placeholder="Motor, araç..."></label>
+            <label>Plaka <input name="plate" placeholder="Opsiyonel"></label>
+          </div>
+          <button class="btn btn-primary" type="submit">Kurye Ekle</button>
+          <?php if (!mx_table_exists('couriers')): ?>
+            <p class="panel-alert">Kurye yönetimi için önce <code>migrations/006_couriers.sql</code> çalıştırılmalı.</p>
+          <?php endif; ?>
+        </form>
+
+        <section class="panel-card">
+          <div class="panel-card-heading">
+            <h2>Kuryeler</h2>
+            <span><?= count($couriers) ?> kayıt</span>
+          </div>
+          <div class="panel-table-wrap compact-table-wrap">
+            <table class="panel-table courier-table">
+              <thead><tr><th>Kurye</th><th>Telefon</th><th>Araç</th><th>İşlem</th></tr></thead>
+              <tbody>
+                <?php foreach ($couriers as $courier): ?>
+                  <tr>
+                    <td><strong><?= mx_h($courier['full_name']) ?></strong></td>
+                    <td><a href="tel:<?= mx_h($courier['phone']) ?>"><?= mx_h($courier['phone']) ?></a></td>
+                    <td><?= mx_h(trim((string) $courier['vehicle_type'] . ' ' . (string) $courier['plate'])) ?: '-' ?></td>
+                    <td>
+                      <form method="post" onsubmit="return confirm('Bu kurye silinsin mi?');">
+                        <input type="hidden" name="action" value="delete_courier">
+                        <input type="hidden" name="id" value="<?= (int) $courier['id'] ?>">
+                        <button class="panel-icon-btn danger" type="submit" aria-label="Kuryeyi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>
+                      </form>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+                <?php if (!$couriers): ?><tr><td colspan="4">Henüz kurye tanımı yok.</td></tr><?php endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </section>
 
       <section class="panel-card">
