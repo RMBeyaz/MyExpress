@@ -1466,6 +1466,7 @@ h3 {
 .panel-filters input,
 .panel-filters select,
 .panel-edit-form input,
+.panel-card input,
 .panel-card select,
 .panel-card textarea {
   width: 100%;
@@ -1473,6 +1474,14 @@ h3 {
   padding: 11px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.panel-login select,
+.panel-filters select,
+.panel-edit-form select,
+.panel-card select {
+  height: 46px;
+  line-height: 1.2;
 }
 
 .panel-card textarea {
@@ -3208,12 +3217,12 @@ h3 {
 }
 
 .panel-body .user-create-card .panel-edit-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: end;
 }
 
 .panel-body .user-create-card {
-  min-height: 256px;
+  min-height: 0;
 }
 
 .panel-body .user-create-card .btn {
@@ -3223,29 +3232,21 @@ h3 {
 
 .panel-body .user-create-card select,
 .panel-body .user-create-card input {
-  min-height: 42px;
+  height: 46px;
+  min-height: 46px;
+  padding: 11px 14px;
 }
 
-.panel-body .panel-detail-grid:has(.user-create-card) {
-  align-items: stretch;
+.panel-body .panel-user-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-.panel-body .panel-detail-grid:has(.user-create-card) .panel-card {
+.panel-body .panel-user-stack .panel-card {
   display: flex;
   flex-direction: column;
-}
-
-.panel-body .panel-detail-grid:has(.user-create-card) .panel-detail-list {
-  margin-top: 6px;
-}
-
-.panel-body .panel-detail-grid:has(.user-create-card) .panel-detail-list dt,
-.panel-body .panel-detail-grid:has(.user-create-card) .panel-detail-list dd {
-  padding-block: 5px;
-}
-
-.panel-body .panel-detail-grid:has(.user-create-card) .panel-detail-list {
-  grid-template-columns: 110px minmax(0, 1fr);
 }
 
 .panel-body .panel-detail-list {
@@ -3361,7 +3362,8 @@ h3 {
 .panel-body .user-table input,
 .panel-body .user-table select {
   width: 100%;
-  min-height: 34px;
+  height: 36px;
+  min-height: 36px;
   padding: 7px 9px;
   border: 1px solid #dbe2e7;
   border-radius: 8px;

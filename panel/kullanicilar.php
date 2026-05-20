@@ -309,7 +309,7 @@ if (mx_table_exists('couriers')) {
         </div>
       </section>
 
-      <section class="panel-detail-grid">
+      <section class="panel-user-stack">
         <form class="panel-card user-create-card" method="post">
           <h2>Yeni Kullanıcı</h2>
           <input type="hidden" name="action" value="create">
@@ -329,17 +329,9 @@ if (mx_table_exists('couriers')) {
           </div>
           <button class="btn btn-primary" type="submit">Kullanıcı Oluştur</button>
         </form>
-
-        <article class="panel-card">
-          <h2>Rol Mantığı</h2>
-          <dl class="panel-detail-list">
-            <dt>Yönetici</dt><dd>Talep operasyonu, fiyat yönetimi, çalışan oluşturma.</dd>
-            <dt>Çalışan</dt><dd>Talep listesi ve talep operasyon işlemleri.</dd>
-          </dl>
-        </article>
       </section>
 
-      <section class="panel-detail-grid courier-management-grid">
+      <section class="panel-user-stack courier-management-grid">
         <form class="panel-card user-create-card courier-create-card" method="post">
           <h2>Yeni Kurye</h2>
           <input type="hidden" name="action" value="create_courier">
