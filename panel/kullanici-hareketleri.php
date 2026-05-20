@@ -43,7 +43,7 @@ if (mx_table_exists('request_audit_logs')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($user['username']) ?> Hareketleri | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-logo-refresh">
+    <link rel="stylesheet" href="../styles.css?v=20260520-mobile-menu-minimal">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
