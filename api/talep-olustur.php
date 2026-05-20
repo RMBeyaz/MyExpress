@@ -14,13 +14,7 @@ try {
     $required = [
         'pickup' => 'Alim mahallesi',
         'dropoff' => 'Teslim mahallesi',
-        'pickupCity' => 'Alim sehri',
-        'pickupDistrict' => 'Alim ilcesi',
-        'pickupRoad' => 'Alim cadde/sokak',
         'pickupStreet' => 'Alim acik adresi',
-        'dropoffCity' => 'Teslim sehri',
-        'dropoffDistrict' => 'Teslim ilcesi',
-        'dropoffRoad' => 'Teslim cadde/sokak',
         'dropoffStreet' => 'Teslim acik adresi',
         'senderName' => 'Gonderici ad soyad',
         'senderPhone' => 'Gonderici telefon',
@@ -120,6 +114,24 @@ try {
         }
         return implode("\n", $lines);
     };
+    $deriveDistrict = static function (string $area): string {
+        $parts = array_values(array_filter(array_map('trim', preg_split('/[,\/]+/', $area) ?: [])));
+        $filtered = [];
+        foreach ($parts as $part) {
+            $lower = function_exists('mb_strtolower') ? mb_strtolower($part, 'UTF-8') : strtolower($part);
+            if (preg_match('/\b(sokak|sok\.|sk\.|cadde|cad\.|cd\.|no|apt|daire|kat)\b/u', $lower)) {
+                continue;
+            }
+            if (preg_match('/\d/u', $lower)) {
+                continue;
+            }
+            $filtered[] = $part;
+        }
+        if (count($filtered) >= 2) {
+            return (string) end($filtered);
+        }
+        return $filtered[0] ?? '';
+    };
     $pickupStreet = $addressColumnsReady ? mx_clean_text($payload['pickupStreet'], 1000) : $buildAddressText('pickup');
     $dropoffStreet = $addressColumnsReady ? mx_clean_text($payload['dropoffStreet'], 1000) : $buildAddressText('dropoff');
     $extraColumnsSql = '';
@@ -129,7 +141,17 @@ try {
         $extraColumnsSql = ', ' . implode(', ', array_keys($availableAddressColumns));
         $extraValuesSql = ', :' . implode(', :', array_keys($availableAddressColumns));
         foreach ($availableAddressColumns as $column => $meta) {
-            $extraParams[':' . $column] = mx_clean_string($payload[$meta['payload']] ?? '', (int) $meta['max']);
+            $value = (string) ($payload[$meta['payload']] ?? '');
+            if ($value === '') {
+                if (str_ends_with($column, '_city')) {
+                    $value = 'İstanbul';
+                } elseif ($column === 'pickup_district') {
+                    $value = $deriveDistrict((string) $payload['pickup']);
+                } elseif ($column === 'dropoff_district') {
+                    $value = $deriveDistrict((string) $payload['dropoff']);
+                }
+            }
+            $extraParams[':' . $column] = mx_clean_string($value, (int) $meta['max']);
         }
     }
     $pdo->beginTransaction();

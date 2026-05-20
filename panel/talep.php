@@ -85,6 +85,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id > 0 && $action === 'details') {
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
         $setDistance = $hasDistance ? ', distance_km = :distance_km' : '';
+        $deriveDistrict = static function (string $area): string {
+            $parts = array_values(array_filter(array_map('trim', preg_split('/[,\/]+/', $area) ?: [])));
+            $filtered = [];
+            foreach ($parts as $part) {
+                $lower = function_exists('mb_strtolower') ? mb_strtolower($part, 'UTF-8') : strtolower($part);
+                if (preg_match('/\b(sokak|sok\.|sk\.|cadde|cad\.|cd\.|bulvar|blv\.|no|apt|daire|kat)\b/u', $lower)) {
+                    continue;
+                }
+                if (preg_match('/\d/u', $lower)) {
+                    continue;
+                }
+                $filtered[] = $part;
+            }
+            if (count($filtered) >= 2) {
+                return (string) end($filtered);
+            }
+            return $filtered[0] ?? '';
+        };
         $addressColumns = [
             'pickup_city' => ['post' => 'pickup_city', 'max' => 80],
             'pickup_district' => ['post' => 'pickup_district', 'max' => 80],
@@ -97,10 +115,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         $setAddressColumns = '';
         $addressParams = [];
+        $addressFallbacks = [
+            'pickup_city' => 'İstanbul',
+            'pickup_district' => $deriveDistrict((string) ($_POST['pickup'] ?? '')),
+            'pickup_road' => '',
+            'pickup_building_no' => '',
+            'dropoff_city' => 'İstanbul',
+            'dropoff_district' => $deriveDistrict((string) ($_POST['dropoff'] ?? '')),
+            'dropoff_road' => '',
+            'dropoff_building_no' => '',
+        ];
         foreach ($addressColumns as $column => $meta) {
             if (mx_column_exists('courier_requests', $column)) {
                 $setAddressColumns .= ', ' . $column . ' = :' . $column;
-                $addressParams[':' . $column] = mx_clean_string($_POST[$meta['post']] ?? '', (int) $meta['max']);
+                $addressParams[':' . $column] = mx_clean_string($_POST[$meta['post']] ?? $addressFallbacks[$column] ?? '', (int) $meta['max']);
             }
         }
         $pricing = mx_pricing_settings();
@@ -214,7 +242,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-mobile-menu-minimal">
+    <link rel="stylesheet" href="../styles.css?v=20260521-request-panel-polish">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -297,6 +325,12 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
             <button class="panel-icon-btn edit-action" type="button" data-edit-toggle aria-label="Talep bilgilerini düzenle" title="Düzenle">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.95l-2.75-2.75L4 17.25Zm15.7-10.1a1 1 0 0 0 0-1.42l-1.43-1.43a1 1 0 0 0-1.42 0l-1.12 1.12 2.75 2.75 1.22-1.02Z"/></svg>
             </button>
+            <button class="panel-icon-btn save" type="submit" data-save-edit disabled aria-label="Değişiklikleri kaydet" title="Değişiklikleri kaydet">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9.5 16.6 5.9 13l-1.4 1.4 5 5L20 8.9 18.6 7.5l-9.1 9.1Z"/></svg>
+            </button>
+            <button class="panel-icon-btn cancel" type="button" data-cancel-edit disabled aria-label="Vazgeç" title="Vazgeç">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6.4 5 5 6.4l5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6 6.4 5Z"/></svg>
+            </button>
           </div>
         </div>
         <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
@@ -342,16 +376,8 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
             <div class="panel-edit-grid panel-edit-grid-address">
               <label>Alım bölgesi <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly></label>
               <label>Teslim bölgesi <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly></label>
-              <label>Alım şehir <input name="pickup_city" value="<?= mx_h($request['pickup_city'] ?? 'İstanbul') ?>" required readonly></label>
-              <label>Teslim şehir <input name="dropoff_city" value="<?= mx_h($request['dropoff_city'] ?? 'İstanbul') ?>" required readonly></label>
-              <label>Alım ilçe <input name="pickup_district" value="<?= mx_h($request['pickup_district'] ?? '') ?>" required readonly></label>
-              <label>Teslim ilçe <input name="dropoff_district" value="<?= mx_h($request['dropoff_district'] ?? '') ?>" required readonly></label>
-              <label>Alım cadde / sokak <input name="pickup_road" value="<?= mx_h($request['pickup_road'] ?? '') ?>" required readonly></label>
-              <label>Teslim cadde / sokak <input name="dropoff_road" value="<?= mx_h($request['dropoff_road'] ?? '') ?>" required readonly></label>
-              <label>Alım bina / kapı no <input name="pickup_building_no" value="<?= mx_h($request['pickup_building_no'] ?? '') ?>" readonly></label>
-              <label>Teslim bina / kapı no <input name="dropoff_building_no" value="<?= mx_h($request['dropoff_building_no'] ?? '') ?>" readonly></label>
-              <label>Alım adres tarifi <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
-              <label>Teslim adres tarifi <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
+              <label>Alım açık adres / tarif <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
+              <label>Teslim açık adres / tarif <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
             </div>
           </section>
           <section class="panel-edit-section">
@@ -372,10 +398,6 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
             <div class="panel-edit-grid panel-edit-grid-notes">
               <label>Talep notu <textarea name="note" readonly><?= mx_h($request['note']) ?></textarea></label>
               <label>Değişiklik notu <textarea name="change_note" placeholder="Adres düzeltildi, telefon güncellendi..." readonly></textarea></label>
-            </div>
-            <div class="edit-confirm-actions">
-              <button class="btn btn-primary" type="submit" data-save-edit disabled>Değişiklikleri Kaydet</button>
-              <button class="btn btn-secondary" type="button" data-cancel-edit disabled>Vazgeç</button>
             </div>
           </section>
         </div>
@@ -440,6 +462,38 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       const dropoffLng = document.querySelector('[data-dropoff-lng]');
       let editSubmitApproved = false;
       let pendingConfirmAction = null;
+      const initialEditValues = new Map();
+      editForm?.querySelectorAll('input, textarea, select').forEach((field) => {
+        if (field.name) initialEditValues.set(field.name, field.value);
+      });
+
+      const setEditMode = (enabled) => {
+        if (!editForm) return;
+        editForm.classList.toggle('is-readonly', !enabled);
+        editForm.querySelectorAll('input:not([type="hidden"]), textarea').forEach((field) => {
+          if (enabled) {
+            field.removeAttribute('readonly');
+          } else {
+            field.setAttribute('readonly', 'readonly');
+          }
+        });
+        editForm.querySelectorAll('select').forEach((field) => {
+          field.disabled = !enabled;
+        });
+        [saveButton, cancelEditButton, distanceButton].forEach((button) => {
+          if (button) button.disabled = !enabled;
+        });
+        if (editToggle) editToggle.hidden = enabled;
+      };
+
+      const restoreEditValues = () => {
+        editForm?.querySelectorAll('input, textarea, select').forEach((field) => {
+          if (!field.name || !initialEditValues.has(field.name)) return;
+          field.value = initialEditValues.get(field.name);
+        });
+        editSubmitApproved = false;
+        setEditMode(false);
+      };
 
       const openEditConfirm = ({ title, text, approveText, action }) => {
         pendingConfirmAction = action;
@@ -514,10 +568,8 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       };
 
       const panelAddressQuery = (prefix) => [
-        editForm?.elements[`${prefix}_road`]?.value,
+        editForm?.elements[`${prefix}_street`]?.value,
         editForm?.elements[prefix]?.value,
-        editForm?.elements[`${prefix}_district`]?.value,
-        editForm?.elements[`${prefix}_city`]?.value,
       ].filter(Boolean).join(', ');
 
       const calculatePanelDistance = async () => {
@@ -553,10 +605,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       };
 
       editToggle?.addEventListener('click', () => {
-        editForm?.classList.remove('is-readonly');
-        editForm?.querySelectorAll('input[readonly], textarea[readonly]').forEach((field) => field.removeAttribute('readonly'));
-        editForm?.querySelectorAll('select[disabled], button[disabled]').forEach((field) => field.removeAttribute('disabled'));
-        editToggle.hidden = true;
+        setEditMode(true);
       });
       editForm?.addEventListener('submit', (event) => {
         if (!editSubmitApproved) {
@@ -588,7 +637,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         }
         if (pendingConfirmAction === 'cancel') {
           closeEditConfirm();
-          window.location.reload();
+          restoreEditValues();
         }
       });
       editConfirmClose?.addEventListener('click', closeEditConfirm);

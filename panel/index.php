@@ -106,21 +106,49 @@ $statusUrl = static function (string $status) use ($filters): string {
 };
 
 $shortRouteArea = static function (string $area, ?string $district = null): string {
-    $area = trim($area);
+    $area = trim(preg_replace('/\s+/', ' ', $area) ?? '');
     $district = trim((string) $district);
-    $parts = array_values(array_filter(array_map('trim', explode(',', $area))));
+    $parts = array_values(array_filter(array_map('trim', preg_split('/[,\/]+/', $area) ?: [])));
+    $district = preg_replace('/\s+\/\s+.*$/', '', $district) ?? $district;
+    $neighborhood = '';
+    $cleanParts = [];
+    $toLower = static fn (string $value): string => function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
 
+    foreach ($parts as $part) {
+        $lower = $toLower($part);
+        if (preg_match('/\b(sokak|sok\.|sk\.|cadde|cad\.|cd\.|bulvar|blv\.|no|apt|daire|kat)\b/u', $lower)) {
+            continue;
+        }
+        if (preg_match('/\d/u', $lower)) {
+            continue;
+        }
+        $cleanParts[] = $part;
+        if (str_contains($lower, 'mah')) {
+            $neighborhood = $part;
+        }
+    }
+
+    if ($district === '' && count($cleanParts) >= 2) {
+        $district = (string) end($cleanParts);
+    }
+    if ($neighborhood === '') {
+        foreach ($cleanParts as $part) {
+            if ($district === '' || $toLower($part) !== $toLower($district)) {
+                $neighborhood = $part;
+                break;
+            }
+        }
+    }
+
+    if ($district !== '' && $neighborhood !== '' && $toLower($district) !== $toLower($neighborhood)) {
+        return $district . ' / ' . $neighborhood;
+    }
     if ($district !== '') {
-        $neighborhoods = array_values(array_filter($parts, static fn (string $part): bool => $part !== $district));
-        $neighborhood = $neighborhoods ? (string) end($neighborhoods) : '';
-        return $neighborhood !== '' ? $district . ' / ' . $neighborhood : $district;
+        return $district;
     }
-
-    if (count($parts) >= 2) {
-        $lastIndex = count($parts) - 1;
-        return $parts[$lastIndex] . ' / ' . $parts[$lastIndex - 1];
+    if ($neighborhood !== '') {
+        return $neighborhood;
     }
-
     return $area !== '' ? $area : '-';
 };
 
@@ -247,7 +275,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-mobile-menu-minimal">
+    <link rel="stylesheet" href="../styles.css?v=20260521-request-panel-polish">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -296,21 +324,21 @@ if (mx_panel_is_logged_in()) {
             <strong><?= $hasActivePanelFilters ? 'Açık' : 'Kapalı' ?></strong>
           </button>
           <form id="panel-filters" class="panel-filters <?= $hasActivePanelFilters ? 'is-open' : '' ?>" method="get">
-            <label>Görünüm
+            <label class="filter-view">Görünüm
               <select name="view">
                 <?php foreach ($views as $key => $label): ?>
                   <option value="<?= mx_h($key) ?>" <?= $filters['view'] === $key ? 'selected' : '' ?>><?= mx_h($label) ?></option>
                 <?php endforeach; ?>
               </select>
             </label>
-            <label>Başlangıç <input type="date" name="date_from" value="<?= mx_h($filters['date_from']) ?>"></label>
-            <label>Bitiş <input type="date" name="date_to" value="<?= mx_h($filters['date_to']) ?>"></label>
-            <label>Talep no <input name="tracking" value="<?= mx_h($filters['tracking']) ?>" placeholder="MX..."></label>
-            <label>Gönderici <input name="sender" value="<?= mx_h($filters['sender']) ?>" placeholder="Ad soyad"></label>
-            <label>Alıcı <input name="recipient" value="<?= mx_h($filters['recipient']) ?>" placeholder="Ad soyad"></label>
-            <label>Telefon <input name="phone" value="<?= mx_h($filters['phone']) ?>" placeholder="05..."></label>
-            <label class="filter-pickup">Alım adresi <input name="pickup_address" value="<?= mx_h($filters['pickup_address']) ?>" placeholder="Alım mahalle, sokak"></label>
-            <label class="filter-dropoff">Teslim adresi <input name="dropoff_address" value="<?= mx_h($filters['dropoff_address']) ?>" placeholder="Teslim mahalle, sokak"></label>
+            <label class="filter-date">Başlangıç <input type="date" name="date_from" value="<?= mx_h($filters['date_from']) ?>"></label>
+            <label class="filter-date">Bitiş <input type="date" name="date_to" value="<?= mx_h($filters['date_to']) ?>"></label>
+            <label class="filter-tracking">Talep no <input name="tracking" value="<?= mx_h($filters['tracking']) ?>" placeholder="MX..."></label>
+            <label class="filter-person">Gönderici <input name="sender" value="<?= mx_h($filters['sender']) ?>" placeholder="Ad soyad"></label>
+            <label class="filter-person">Alıcı <input name="recipient" value="<?= mx_h($filters['recipient']) ?>" placeholder="Ad soyad"></label>
+            <label class="filter-phone">Telefon <input name="phone" value="<?= mx_h($filters['phone']) ?>" placeholder="05..."></label>
+            <label class="filter-pickup">Alım adresi <input name="pickup_address" value="<?= mx_h($filters['pickup_address']) ?>" placeholder="İlçe veya mahalle"></label>
+            <label class="filter-dropoff">Teslim adresi <input name="dropoff_address" value="<?= mx_h($filters['dropoff_address']) ?>" placeholder="İlçe veya mahalle"></label>
             <div class="filter-actions">
               <button class="btn btn-primary" type="submit">Filtrele</button>
               <a class="btn btn-secondary" href="index.php">Temizle</a>

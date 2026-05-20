@@ -654,15 +654,7 @@ const fillDetailFormFromParams = () => {
   [
     'pickup',
     'dropoff',
-    'pickupCity',
-    'pickupDistrict',
-    'pickupRoad',
-    'pickupBuildingNo',
     'pickupStreet',
-    'dropoffCity',
-    'dropoffDistrict',
-    'dropoffRoad',
-    'dropoffBuildingNo',
     'dropoffStreet',
   ].forEach((name) => {
     const input = detailForm.elements[name];

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/Logo.png">
-    <link rel="stylesheet" href="styles.css?v=20260520-mobile-menu-minimal">
+    <link rel="stylesheet" href="styles.css?v=20260521-request-panel-polish">
   </head>
   <body>
     <header class="site-header" data-header>
@@ -59,7 +59,7 @@
           <p class="eyebrow">Talep detayları</p>
           <h1>Gönderi detaylarını tamamlayın</h1>
         </div>
-        <p>Alım ve teslim mahallelerini seçtikten sonra şehir, ilçe, cadde/sokak, bina bilgisi ve adres tarifini tamamlayarak talebinizi oluşturabilirsiniz.</p>
+        <p>Alım ve teslim adreslerinizi listeden seçip açık adres tarifini ekleyerek talebinizi oluşturabilirsiniz.</p>
       </section>
 
       <section class="detail-layout detail-layout-compact">
@@ -86,55 +86,17 @@
                   <small class="field-help">Listeden teslim mahallesi veya semti seçin.</small>
                 </label>
               </div>
-              <p class="address-block-title">Alım adresi detayları</p>
-              <div class="form-grid address-parts-grid">
-                <label>
-                  Alım şehir
-                  <input name="pickupCity" value="İstanbul" placeholder="İstanbul" required>
-                </label>
-                <label>
-                  Alım ilçe
-                  <input name="pickupDistrict" placeholder="Örn. Beşiktaş" required>
-                </label>
-                <label>
-                  Alım cadde / sokak
-                  <input name="pickupRoad" placeholder="Örn. Nispetiye Caddesi" required>
-                </label>
-                <label>
-                  Alım bina / kapı no
-                  <input name="pickupBuildingNo" placeholder="Örn. No:12 Kat:3">
-                </label>
-              </div>
-              <p class="address-block-title">Teslim adresi detayları</p>
-              <div class="form-grid address-parts-grid">
-                <label>
-                  Teslim şehir
-                  <input name="dropoffCity" value="İstanbul" placeholder="İstanbul" required>
-                </label>
-                <label>
-                  Teslim ilçe
-                  <input name="dropoffDistrict" placeholder="Örn. Kadıköy" required>
-                </label>
-                <label>
-                  Teslim cadde / sokak
-                  <input name="dropoffRoad" placeholder="Örn. Bağdat Caddesi" required>
-                </label>
-                <label>
-                  Teslim bina / kapı no
-                  <input name="dropoffBuildingNo" placeholder="Örn. Apt. 8 D:5">
-                </label>
-              </div>
               <div class="form-grid">
                 <label>
-                  Alım adres tarifi
-                  <textarea name="pickupStreet" placeholder="Firma adı, kat, daire, güvenlik, zil bilgisi veya kurye için tarif" required></textarea>
+                  Alım açık adres / tarif
+                  <textarea name="pickupStreet" placeholder="Cadde, sokak, bina no, kat, daire, firma adı, güvenlik veya zil bilgisi" required></textarea>
                 </label>
                 <label>
-                  Teslim adres tarifi
-                  <textarea name="dropoffStreet" placeholder="Alıcı adı, kat, daire, güvenlik, teslim noktası veya kurye için tarif" required></textarea>
+                  Teslim açık adres / tarif
+                  <textarea name="dropoffStreet" placeholder="Cadde, sokak, bina no, kat, daire, alıcı noktası veya teslim tarifi" required></textarea>
                 </label>
               </div>
-              <small class="field-help">Şehir, ilçe, cadde/sokak ve adres tarifi zorunludur; bina/kapı no bilgisi varsa mutlaka ekleyin.</small>
+              <small class="field-help">Adres alanından mahalle/semt seçin; açık adres kısmına cadde, sokak, bina ve tarif bilgilerini yazın.</small>
             </div>
 
             <div class="form-section compact-section">
@@ -274,6 +236,6 @@
       <div class="footer-links"><strong>Bilgilendirme</strong><a href="takip.html">Gönderi Durumu Takibi</a><a href="gizlilik-politikasi.html">Gizlilik Politikası</a><a href="kvkk-politikasi.html">KVKK Aydınlatma Metni</a><a href="teslimat-sartlari.html">Teslimat Şartları</a><a href="yasakli-gonderiler.html">Yasaklı Gönderiler</a><a href="sss.html">Sıkça Sorulan Sorular</a></div>
       <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="script.js?v=20260520-mobile-menu-minimal"></script>
+    <script src="script.js?v=20260521-request-panel-polish"></script>
   </body>
 </html>

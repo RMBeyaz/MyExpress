@@ -2642,7 +2642,7 @@ h3 {
 
 .panel-body .panel-filters {
   display: grid !important;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(14, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
   margin: 0 auto 16px;
@@ -2679,15 +2679,23 @@ h3 {
 
 .panel-body .panel-filters .btn {
   white-space: nowrap;
-  padding-inline: 14px;
+  padding-inline: 12px;
+}
+
+.panel-body .panel-filters .filter-view,
+.panel-body .panel-filters .filter-date,
+.panel-body .panel-filters .filter-tracking,
+.panel-body .panel-filters .filter-person,
+.panel-body .panel-filters .filter-phone {
+  grid-column: span 2;
 }
 
 .panel-body .panel-filters .filter-pickup {
-  grid-column: 1 / span 3;
+  grid-column: 1 / span 5;
 }
 
 .panel-body .panel-filters .filter-dropoff {
-  grid-column: 4 / span 3;
+  grid-column: 6 / span 5;
 }
 
 .panel-body .panel-filters .filter-actions {
@@ -2695,7 +2703,13 @@ h3 {
   gap: 8px;
   align-items: end;
   justify-content: flex-end;
-  grid-column: 7 / span 2;
+  grid-column: 11 / span 4;
+}
+
+.panel-body .panel-filters .filter-actions .btn {
+  width: auto;
+  min-width: 112px;
+  max-width: 132px;
 }
 
 .panel-body .panel-table-wrap {
@@ -2830,11 +2844,12 @@ h3 {
 
 .panel-body .route-line {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-columns: 52px minmax(0, 1fr);
   gap: 8px;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.35;
+  max-width: 230px;
 }
 
 .panel-body .route-line + .route-line {
@@ -2909,6 +2924,24 @@ h3 {
   color: #8c342e;
   background: #fbe5e2;
   border-color: #f2c6c0;
+}
+
+.panel-body .panel-icon-btn.cancel {
+  color: #6f4a05;
+}
+
+.panel-body .panel-icon-btn.cancel:hover {
+  color: #5b3c04;
+  background: #fff1c9;
+  border-color: #ead18a;
+}
+
+.panel-body .panel-icon-btn:disabled {
+  color: #8d99a4;
+  background: #edf1f4;
+  border-color: #dbe2e7;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .panel-body .panel-icon-btn.edit-action {

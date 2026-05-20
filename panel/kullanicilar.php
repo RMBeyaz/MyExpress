@@ -22,6 +22,10 @@ $courierVehicleOptions = [
     'panelvan' => 'Panelvan',
     'yaya' => 'Yaya Kurye',
 ];
+$courierVehicleKey = static function (string $value) use ($courierVehicleOptions): string {
+    $key = array_search($value, $courierVehicleOptions, true);
+    return is_string($key) ? $key : '';
+};
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = mx_clean_string($_POST['action'] ?? 'create', 32);
@@ -81,6 +85,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('DELETE FROM couriers WHERE id = :id')->execute([':id' => $id]);
             mx_audit_log(null, 'courier_delete', $courier['full_name'] . ' kuryesi silindi. Telefon: ' . $courier['phone']);
             $message = 'Kurye silindi.';
+        }
+
+        if ($action === 'update_courier') {
+            if (!mx_table_exists('couriers')) {
+                throw new RuntimeException('couriers tablosu bulunamadi.');
+            }
+
+            $id = (int) ($_POST['id'] ?? 0);
+            $fullName = mx_clean_string($_POST['courier_full_name'] ?? '', 120);
+            $phone = mx_clean_string($_POST['courier_phone'] ?? '', 40);
+            $vehicleTypeKey = mx_clean_string($_POST['vehicle_type'] ?? '', 40);
+            $plate = mx_clean_string($_POST['plate'] ?? '', 40);
+            $isActive = (int) ($_POST['is_active'] ?? 0) === 1 ? 1 : 0;
+
+            $target = $pdo->prepare('SELECT full_name, phone FROM couriers WHERE id = :id');
+            $target->execute([':id' => $id]);
+            $courier = $target->fetch();
+            if (!$courier) {
+                throw new RuntimeException('Kurye bulunamadi.');
+            }
+            if ($fullName === '' || $phone === '' || !isset($courierVehicleOptions[$vehicleTypeKey])) {
+                throw new RuntimeException('Kurye adi, telefonu ve arac tipi zorunludur.');
+            }
+
+            $pdo->prepare(
+                'UPDATE couriers
+                 SET full_name = :full_name, phone = :phone, vehicle_type = :vehicle_type, plate = :plate, is_active = :is_active
+                 WHERE id = :id'
+            )->execute([
+                ':full_name' => $fullName,
+                ':phone' => $phone,
+                ':vehicle_type' => $courierVehicleOptions[$vehicleTypeKey],
+                ':plate' => $plate,
+                ':is_active' => $isActive,
+                ':id' => $id,
+            ]);
+            mx_audit_log(null, 'courier_update', $courier['full_name'] . ' kuryesi guncellendi. Yeni ad: ' . $fullName);
+            $message = 'Kurye güncellendi.';
         }
 
         if ($action === 'create') {
@@ -249,7 +291,7 @@ if (mx_table_exists('couriers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-mobile-menu-minimal">
+    <link rel="stylesheet" href="../styles.css?v=20260521-request-panel-polish">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -325,25 +367,47 @@ if (mx_table_exists('couriers')) {
             <h2>Kuryeler</h2>
             <span><?= count($couriers) ?> kayıt</span>
           </div>
-          <div class="panel-table-wrap compact-table-wrap">
-            <table class="panel-table courier-table">
-              <thead><tr><th>Kurye</th><th>Telefon</th><th>Araç</th><th>İşlem</th></tr></thead>
+          <div class="panel-table-wrap">
+            <table class="panel-table user-table user-table-singleline courier-table">
+              <thead><tr><th>Kurye</th><th>Telefon</th><th>Araç tipi</th><th>Plaka</th><th>Durum</th><th>Oluşturma</th><th>İşlem</th></tr></thead>
               <tbody>
                 <?php foreach ($couriers as $courier): ?>
                   <tr>
-                    <td><strong><?= mx_h($courier['full_name']) ?></strong></td>
-                    <td><a href="tel:<?= mx_h($courier['phone']) ?>"><?= mx_h($courier['phone']) ?></a></td>
-                    <td><?= mx_h(trim((string) $courier['vehicle_type'] . ' ' . (string) $courier['plate'])) ?: '-' ?></td>
+                    <td><input form="courier-update-<?= (int) $courier['id'] ?>" name="courier_full_name" value="<?= mx_h($courier['full_name']) ?>" required aria-label="Kurye ad soyad"></td>
+                    <td><input form="courier-update-<?= (int) $courier['id'] ?>" name="courier_phone" value="<?= mx_h($courier['phone']) ?>" required inputmode="tel" aria-label="Kurye telefonu"></td>
                     <td>
-                      <form method="post" onsubmit="return confirm('Bu kurye silinsin mi?');">
-                        <input type="hidden" name="action" value="delete_courier">
-                        <input type="hidden" name="id" value="<?= (int) $courier['id'] ?>">
-                        <button class="panel-icon-btn danger" type="submit" aria-label="Kuryeyi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>
-                      </form>
+                      <select form="courier-update-<?= (int) $courier['id'] ?>" name="vehicle_type" required aria-label="Araç tipi">
+                        <?php foreach ($courierVehicleOptions as $key => $label): ?>
+                          <option value="<?= mx_h($key) ?>" <?= $courierVehicleKey((string) $courier['vehicle_type']) === $key ? 'selected' : '' ?>><?= mx_h($label) ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                    </td>
+                    <td><input form="courier-update-<?= (int) $courier['id'] ?>" name="plate" value="<?= mx_h($courier['plate']) ?>" aria-label="Plaka"></td>
+                    <td>
+                      <select form="courier-update-<?= (int) $courier['id'] ?>" name="is_active" aria-label="Durum">
+                        <option value="1" <?= (int) $courier['is_active'] === 1 ? 'selected' : '' ?>>Aktif</option>
+                        <option value="0" <?= (int) $courier['is_active'] === 0 ? 'selected' : '' ?>>Pasif</option>
+                      </select>
+                    </td>
+                    <td><span class="nowrap"><?= $courier['created_at'] ? mx_h($courier['created_at']) : '-' ?></span></td>
+                    <td>
+                      <div class="user-actions">
+                        <form id="courier-update-<?= (int) $courier['id'] ?>" method="post" class="password-inline">
+                          <input type="hidden" name="action" value="update_courier">
+                          <input type="hidden" name="id" value="<?= (int) $courier['id'] ?>">
+                          <button class="panel-icon-btn save" type="submit" aria-label="Kuryeyi kaydet"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 3h12l2 2v16H5V3Zm2 2v14h10V7.8L14.2 5H7Zm2 1h5v5H9V6Zm0 8h6v2H9v-2Z"/></svg></button>
+                        </form>
+                        <a class="panel-icon-btn" href="kurye-hareketleri.php?id=<?= (int) $courier['id'] ?>" aria-label="Kurye işlem geçmişi"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M13 3a9 9 0 1 0 8.95 10h-2A7 7 0 1 1 13 5v4l5-5-5-5v4Zm-1 5h2v5l4 2-.9 1.8-5.1-2.55V8Z"/></svg></a>
+                        <form method="post" onsubmit="return confirm('Bu kurye silinsin mi?');">
+                          <input type="hidden" name="action" value="delete_courier">
+                          <input type="hidden" name="id" value="<?= (int) $courier['id'] ?>">
+                          <button class="panel-icon-btn danger" type="submit" aria-label="Kuryeyi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 <?php endforeach; ?>
-                <?php if (!$couriers): ?><tr><td colspan="4">Henüz kurye tanımı yok.</td></tr><?php endif; ?>
+                <?php if (!$couriers): ?><tr><td colspan="7">Henüz kurye tanımı yok.</td></tr><?php endif; ?>
               </tbody>
             </table>
           </div>
