@@ -2202,6 +2202,11 @@ h3 {
 }
 
 @media (max-width: 960px) {
+  .site-header {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
   .main-nav,
   .header-actions {
     display: none;
@@ -2212,39 +2217,77 @@ h3 {
   }
 
   .site-header.is-open {
-    align-items: flex-start;
+    align-items: center;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .site-header.is-open .main-nav,
   .site-header.is-open .header-actions {
-    position: absolute;
-    right: 20px;
-    left: 20px;
-    top: 72px;
+    position: static;
     display: grid;
-    gap: 14px;
-    padding: 18px;
+    width: 100%;
+    gap: 10px;
+    padding: 14px;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 8px;
     box-shadow: var(--shadow);
   }
 
+  .site-header.is-open .main-nav {
+    order: 3;
+  }
+
   .site-header.is-open .header-actions {
-    top: 590px;
+    order: 4;
+    grid-template-columns: 1fr;
+    box-shadow: none;
+  }
+
+  .site-header.is-open .main-nav > a,
+  .site-header.is-open .nav-trigger,
+  .site-header.is-open .header-actions a {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px;
+    background: #fbfcfd;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    white-space: normal;
+  }
+
+  .site-header.is-open .header-actions .btn {
+    min-width: 0;
+  }
+
+  .site-header.is-open .nav-dropdown.is-open .nav-trigger::after {
+    transform: rotate(225deg) translate(-1px, -1px);
   }
 
   .site-header.is-open .dropdown-menu {
     position: static;
-    display: grid;
+    display: none;
     grid-template-columns: 1fr;
     width: 100%;
     margin-top: 8px;
     padding: 10px;
+    max-height: min(52dvh, 420px);
+    overflow-y: auto;
     opacity: 1;
     pointer-events: auto;
     transform: none;
     box-shadow: none;
+  }
+
+  .site-header.is-open .nav-dropdown.is-open .dropdown-menu {
+    display: grid;
+  }
+
+  .site-header.is-open .dropdown-menu a {
+    white-space: normal;
   }
 
   .dropdown-menu::before {

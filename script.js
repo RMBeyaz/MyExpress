@@ -1,5 +1,5 @@
 const header = document.querySelector('[data-header]');
-const menuToggle = document.querySelector('[data-menu-toggle]');
+let menuToggle = document.querySelector('[data-menu-toggle]');
 const deliveryForm = document.querySelector('[data-home-form]');
 const addressInputs = document.querySelectorAll('[data-address-input]');
 const priceEstimate = document.querySelector('[data-price-estimate]');
@@ -10,6 +10,17 @@ const scheduleFields = document.querySelector('[data-schedule-fields]');
 const scheduleDateField = document.querySelector('[data-schedule-date]');
 const scheduleTimeFields = document.querySelectorAll('[data-schedule-time]');
 const addressSearchTimers = new WeakMap();
+
+if (header && !menuToggle) {
+  menuToggle = document.createElement('button');
+  menuToggle.className = 'menu-toggle';
+  menuToggle.type = 'button';
+  menuToggle.setAttribute('aria-label', 'Menüyü aç');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.setAttribute('data-menu-toggle', '');
+  menuToggle.innerHTML = '<span></span><span></span><span></span>';
+  header.appendChild(menuToggle);
+}
 
 const istanbulDistricts = [
   { name: 'Adalar', lat: 40.876, lng: 29.091 },
@@ -544,12 +555,30 @@ const renderAutocomplete = async (input) => {
 menuToggle?.addEventListener('click', () => {
   const isOpen = header.classList.toggle('is-open');
   menuToggle.setAttribute('aria-expanded', String(isOpen));
+  if (!isOpen) {
+    document.querySelectorAll('.nav-dropdown.is-open').forEach((dropdown) => dropdown.classList.remove('is-open'));
+    document.querySelectorAll('.nav-trigger[aria-expanded]').forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
+  }
+});
+
+document.querySelectorAll('.nav-trigger').forEach((trigger) => {
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.addEventListener('click', (event) => {
+    if (!window.matchMedia('(max-width: 960px)').matches || !header.classList.contains('is-open')) return;
+    event.preventDefault();
+    const dropdown = trigger.closest('.nav-dropdown');
+    const isOpen = dropdown?.classList.toggle('is-open') || false;
+    trigger.setAttribute('aria-expanded', String(isOpen));
+  });
 });
 
 document.querySelectorAll('.main-nav a, .header-actions a').forEach((link) => {
   link.addEventListener('click', () => {
+    if (link.classList.contains('nav-trigger') && window.matchMedia('(max-width: 960px)').matches) return;
     header.classList.remove('is-open');
     menuToggle?.setAttribute('aria-expanded', 'false');
+    document.querySelectorAll('.nav-dropdown.is-open').forEach((dropdown) => dropdown.classList.remove('is-open'));
+    document.querySelectorAll('.nav-trigger[aria-expanded]').forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
   });
 });
 
