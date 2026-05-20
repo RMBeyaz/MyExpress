@@ -1588,33 +1588,33 @@ h3 {
 }
 
 .panel-status-new {
-  color: #365066;
-  background: #eef3f7;
+  color: #405467;
+  background: #edf2f6;
 }
 
 .panel-status-called {
-  color: #7a4a11;
-  background: #fff3dc;
+  color: #6f4a05;
+  background: #fff1c9;
 }
 
 .panel-status-assigned {
-  color: #684c12;
-  background: #f5ead0;
+  color: #314d8b;
+  background: #e4ecff;
 }
 
 .panel-status-picked_up {
-  color: #14526d;
-  background: #e2f2fa;
+  color: #11645d;
+  background: #dff3f1;
 }
 
 .panel-status-delivered {
   color: #1f684b;
-  background: #e4f6ed;
+  background: #def4e7;
 }
 
 .panel-status-cancelled {
-  color: #8c342e;
-  background: #fbe5e2;
+  color: #8a2f2a;
+  background: #f9dfdc;
 }
 
 .wa-icon {
@@ -2438,6 +2438,10 @@ h3 {
   resize: vertical;
 }
 
+.panel-body .panel-filter-toggle {
+  display: none;
+}
+
 .panel-body .panel-filters {
   display: grid !important;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -2603,19 +2607,19 @@ h3 {
   color: var(--red) !important;
 }
 
-.panel-body .request-row-new { background: #f7fafd; box-shadow: inset 4px 0 #b9c9d6; }
-.panel-body .request-row-called { background: #fffaf0; box-shadow: inset 4px 0 #e5bd75; }
-.panel-body .request-row-assigned { background: #fbf6ea; box-shadow: inset 4px 0 #d8b45e; }
-.panel-body .request-row-picked_up { background: #f2f9fd; box-shadow: inset 4px 0 #8bc7df; }
-.panel-body .request-row-delivered { background: #f2fbf6; box-shadow: inset 4px 0 #8fcfaf; }
-.panel-body .request-row-cancelled { background: #fff4f2; box-shadow: inset 4px 0 #e5a19a; }
+.panel-body .request-row-new { background: #f6f8fa; box-shadow: inset 4px 0 #9aa9b5; }
+.panel-body .request-row-called { background: #fff8e8; box-shadow: inset 4px 0 #e3b64d; }
+.panel-body .request-row-assigned { background: #f0f5ff; box-shadow: inset 4px 0 #7893d9; }
+.panel-body .request-row-picked_up { background: #edf9f8; box-shadow: inset 4px 0 #65b8ae; }
+.panel-body .request-row-delivered { background: #eefaf2; box-shadow: inset 4px 0 #69b989; }
+.panel-body .request-row-cancelled { background: #fff1f0; box-shadow: inset 4px 0 #df7d75; }
 
-.panel-body .request-row-new:hover { background: #f1f7fb; }
-.panel-body .request-row-called:hover { background: #fff5e4; }
-.panel-body .request-row-assigned:hover { background: #f8efd9; }
-.panel-body .request-row-picked_up:hover { background: #e9f6fc; }
-.panel-body .request-row-delivered:hover { background: #e9f8f0; }
-.panel-body .request-row-cancelled:hover { background: #fdeae7; }
+.panel-body .request-row-new:hover { background: #eef3f6; }
+.panel-body .request-row-called:hover { background: #fff1d1; }
+.panel-body .request-row-assigned:hover { background: #e6eeff; }
+.panel-body .request-row-picked_up:hover { background: #e0f3f1; }
+.panel-body .request-row-delivered:hover { background: #e0f5e8; }
+.panel-body .request-row-cancelled:hover { background: #f9dfdc; }
 
 .panel-body .person-name {
   font-weight: 900;
@@ -2671,12 +2675,12 @@ h3 {
   font-weight: 900;
 }
 
-.panel-body .panel-status-new { color: #365066; background: #eef3f7; }
-.panel-body .panel-status-called { color: #7a4a11; background: #fff3dc; }
-.panel-body .panel-status-assigned { color: #684c12; background: #f5ead0; }
-.panel-body .panel-status-picked_up { color: #14526d; background: #e2f2fa; }
-.panel-body .panel-status-delivered { color: #1f684b; background: #e4f6ed; }
-.panel-body .panel-status-cancelled { color: #8c342e; background: #fbe5e2; }
+.panel-body .panel-status-new { color: #405467; background: #edf2f6; }
+.panel-body .panel-status-called { color: #6f4a05; background: #fff1c9; }
+.panel-body .panel-status-assigned { color: #314d8b; background: #e4ecff; }
+.panel-body .panel-status-picked_up { color: #11645d; background: #dff3f1; }
+.panel-body .panel-status-delivered { color: #1f684b; background: #def4e7; }
+.panel-body .panel-status-cancelled { color: #8a2f2a; background: #f9dfdc; }
 
 .panel-body .panel-icon-btn {
   display: inline-flex;
@@ -3194,8 +3198,33 @@ h3 {
 }
 
 @media (max-width: 640px) {
+  .panel-body .panel-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 46px;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    color: var(--navy);
+    background: #fff;
+    border: 1px solid #dbe2e7;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 900;
+  }
+
+  .panel-body .panel-filter-toggle strong {
+    color: #687684;
+    font-size: 12px;
+  }
+
   .panel-body .panel-filters {
     grid-template-columns: 1fr;
+  }
+
+  .panel-body .panel-filters:not(.is-open) {
+    display: none !important;
   }
 
   .panel-body .panel-filters .filter-actions {

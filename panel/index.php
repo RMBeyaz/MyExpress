@@ -105,11 +105,43 @@ $statusUrl = static function (string $status) use ($filters): string {
     return 'index.php' . ($query ? '?' . http_build_query($query) : '');
 };
 
+$shortRouteArea = static function (string $area, ?string $district = null): string {
+    $area = trim($area);
+    $district = trim((string) $district);
+    $parts = array_values(array_filter(array_map('trim', explode(',', $area))));
+
+    if ($district !== '') {
+        $neighborhoods = array_values(array_filter($parts, static fn (string $part): bool => $part !== $district));
+        $neighborhood = $neighborhoods ? (string) end($neighborhoods) : '';
+        return $neighborhood !== '' ? $district . ' / ' . $neighborhood : $district;
+    }
+
+    if (count($parts) >= 2) {
+        $lastIndex = count($parts) - 1;
+        return $parts[$lastIndex] . ' / ' . $parts[$lastIndex - 1];
+    }
+
+    return $area !== '' ? $area : '-';
+};
+
+$hasActivePanelFilters = $filters['view'] !== 'normal'
+    || $filters['status'] !== ''
+    || $filters['date_from'] !== ''
+    || $filters['date_to'] !== ''
+    || $filters['tracking'] !== ''
+    || $filters['sender'] !== ''
+    || $filters['recipient'] !== ''
+    || $filters['phone'] !== ''
+    || $filters['pickup_address'] !== ''
+    || $filters['dropoff_address'] !== '';
+
 if (mx_panel_is_logged_in()) {
     try {
         $pdo = mx_pdo();
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
         $hasCourierAssignment = mx_table_exists('couriers') && mx_column_exists('courier_requests', 'assigned_courier_id');
+        $hasPickupDistrict = mx_column_exists('courier_requests', 'pickup_district');
+        $hasDropoffDistrict = mx_column_exists('courier_requests', 'dropoff_district');
         $sortMap = [
             'date' => 'created_at',
             'status' => 'status',
@@ -183,6 +215,8 @@ if (mx_panel_is_logged_in()) {
 
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
         $distanceSelect = $hasDistance ? 'cr.distance_km,' : 'NULL AS distance_km,';
+        $addressDetailSelect = ($hasPickupDistrict ? ', cr.pickup_district' : ', NULL AS pickup_district')
+            . ($hasDropoffDistrict ? ', cr.dropoff_district' : ', NULL AS dropoff_district');
         $courierSelect = $hasCourierAssignment ? ', c.full_name AS courier_name, c.phone AS courier_phone' : ", NULL AS courier_name, NULL AS courier_phone";
         $courierJoin = $hasCourierAssignment ? ' LEFT JOIN couriers c ON c.id = cr.assigned_courier_id' : '';
         $qualifiedWhereSql = $whereSql !== '' ? str_replace(
@@ -194,7 +228,7 @@ if (mx_panel_is_logged_in()) {
             ? 'cr.' . $sort
             : str_replace(['price', 'distance_km'], ['cr.price', 'cr.distance_km'], $sort);
         $sql = "SELECT cr.id, cr.tracking_code, cr.status, cr.pickup, cr.dropoff, cr.price, {$distanceSelect}
-                   cr.sender_name, cr.sender_phone, cr.recipient_name, cr.recipient_phone, cr.created_at{$courierSelect}
+                   cr.sender_name, cr.sender_phone, cr.recipient_name, cr.recipient_phone, cr.created_at{$addressDetailSelect}{$courierSelect}
                 FROM courier_requests cr{$courierJoin}{$qualifiedWhereSql}
                 ORDER BY {$qualifiedSort} {$dir}
                 LIMIT 120";
@@ -213,7 +247,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-logo-refresh">
+    <link rel="stylesheet" href="../styles.css?v=20260520-list-polish">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -257,7 +291,11 @@ if (mx_panel_is_logged_in()) {
           <?php if ($notice === 'deleted'): ?>
             <div class="panel-toast is-visible">Talep silindi.</div>
           <?php endif; ?>
-          <form class="panel-filters" method="get">
+          <button class="panel-filter-toggle" type="button" data-filter-toggle aria-expanded="<?= $hasActivePanelFilters ? 'true' : 'false' ?>" aria-controls="panel-filters">
+            <span>Filtreler</span>
+            <strong><?= $hasActivePanelFilters ? 'Açık' : 'Kapalı' ?></strong>
+          </button>
+          <form id="panel-filters" class="panel-filters <?= $hasActivePanelFilters ? 'is-open' : '' ?>" method="get">
             <label>Görünüm
               <select name="view">
                 <?php foreach ($views as $key => $label): ?>
@@ -305,6 +343,8 @@ if (mx_panel_is_logged_in()) {
               <tbody>
                 <?php foreach ($requests as $request): ?>
                   <?php
+                    $pickupShort = $shortRouteArea((string) $request['pickup'], $request['pickup_district'] ?? null);
+                    $dropoffShort = $shortRouteArea((string) $request['dropoff'], $request['dropoff_district'] ?? null);
                     $dispatchMessage = "MyExpress kurye görevi\n"
                       . 'Talep No: ' . $request['tracking_code'] . "\n"
                       . 'Durum: ' . mx_status_label($request['status']) . "\n"
@@ -319,7 +359,7 @@ if (mx_panel_is_logged_in()) {
                     <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
                     <td><span class="person-name"><?= mx_h($request['sender_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['sender_phone'])) ?>" target="_blank" rel="noopener" aria-label="Gönderici WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['sender_phone']) ?>"><small><?= mx_h($request['sender_phone']) ?></small></a></td>
                     <td><span class="person-name"><?= mx_h($request['recipient_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['recipient_phone'])) ?>" target="_blank" rel="noopener" aria-label="Alıcı WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><small><?= mx_h($request['recipient_phone']) ?></small></a></td>
-                    <td><span class="route-line"><span class="route-label">Alım</span> <?= mx_h($request['pickup']) ?></span><span class="route-line"><span class="route-label">Teslim</span> <?= mx_h($request['dropoff']) ?></span></td>
+                    <td><span class="route-line"><span class="route-label">Alım</span> <?= mx_h($pickupShort) ?></span><span class="route-line"><span class="route-label">Teslim</span> <?= mx_h($dropoffShort) ?></span></td>
                     <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
                     <td><?= mx_h($request['price']) ?></td>
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
@@ -377,6 +417,14 @@ if (mx_panel_is_logged_in()) {
       });
       document.querySelectorAll('[data-courier-missing]').forEach((button) => {
         button.addEventListener('click', () => window.alert('Bu talebe henüz kurye atanmamış. Talep detayından kurye seçebilirsiniz.'));
+      });
+      const filterToggle = document.querySelector('[data-filter-toggle]');
+      const filterPanel = document.querySelector('#panel-filters');
+      filterToggle?.addEventListener('click', () => {
+        const isOpen = filterPanel?.classList.toggle('is-open') || false;
+        filterToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        const state = filterToggle.querySelector('strong');
+        if (state) state.textContent = isOpen ? 'Açık' : 'Kapalı';
       });
     </script>
   </body>
