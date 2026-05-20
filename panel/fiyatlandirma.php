@@ -71,7 +71,7 @@ foreach ($rows as $row) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fiyatlandırma | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260520-courier-dispatch">
+    <link rel="stylesheet" href="../styles.css?v=20260520-logo-refresh">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
