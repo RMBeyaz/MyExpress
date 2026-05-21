@@ -34,20 +34,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'create_invoice') {
-            $title = mx_clean_string($_POST['title'] ?? '', 160);
-            $invoiceNo = mx_clean_string($_POST['invoice_no'] ?? '', 80);
-            $filePath = mx_clean_string($_POST['file_path'] ?? '', 255);
-            $invoiceDate = mx_clean_string($_POST['invoice_date'] ?? '', 20);
             $requestId = (int) ($_POST['request_id'] ?? 0);
-            $amountRaw = str_replace(',', '.', (string) ($_POST['amount'] ?? ''));
-            $amount = is_numeric($amountRaw) ? (float) $amountRaw : null;
+            $status = mx_clean_string($_POST['status'] ?? 'available', 32);
+            $paymentStatus = mx_clean_string($_POST['payment_status'] ?? 'unpaid', 32);
 
-            if ($title === '') {
-                throw new RuntimeException('Fatura başlığı zorunludur.');
+            if (!in_array($status, ['available', 'draft'], true)) {
+                $status = 'draft';
             }
-            if ($invoiceDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $invoiceDate)) {
-                throw new RuntimeException('Fatura tarihi geçerli değil.');
+            if (!in_array($paymentStatus, ['paid', 'unpaid'], true)) {
+                $paymentStatus = 'unpaid';
             }
+
             if ($requestId > 0) {
                 $requestCheck = $pdo->prepare('SELECT id FROM courier_requests WHERE id = :id AND customer_id = :customer_id');
                 $requestCheck->execute([':id' => $requestId, ':customer_id' => (int) $customer['id']]);
@@ -56,61 +53,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if (!empty($_FILES['invoice_pdf']['name'] ?? '')) {
-                $file = $_FILES['invoice_pdf'];
-                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-                    throw new RuntimeException('PDF yüklenemedi. Lütfen dosyayı kontrol edin.');
-                }
-                if ((int) ($file['size'] ?? 0) > 8 * 1024 * 1024) {
-                    throw new RuntimeException('PDF dosyası en fazla 8 MB olmalı.');
-                }
-                $extension = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
-                $header = (string) file_get_contents((string) $file['tmp_name'], false, null, 0, 4);
-                if ($extension !== 'pdf' || $header !== '%PDF') {
-                    throw new RuntimeException('Sadece PDF fatura dosyası yüklenebilir.');
-                }
-                $uploadDir = dirname(__DIR__) . '/uploads/faturalar';
-                if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-                    throw new RuntimeException('Fatura yükleme klasörü oluşturulamadı.');
-                }
-                $safeName = 'fatura-' . (int) $customer['id'] . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(3)) . '.pdf';
-                $targetPath = $uploadDir . '/' . $safeName;
-                if (!move_uploaded_file((string) $file['tmp_name'], $targetPath)) {
-                    throw new RuntimeException('PDF dosyası kaydedilemedi.');
-                }
-                $filePath = '/kurye/uploads/faturalar/' . $safeName;
+            $file = $_FILES['invoice_pdf'] ?? null;
+            if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                throw new RuntimeException('Fatura için PDF dosyası yükleyin.');
+            }
+            if ((int) ($file['size'] ?? 0) > 8 * 1024 * 1024) {
+                throw new RuntimeException('PDF dosyası en fazla 8 MB olmalı.');
             }
 
-            if ($filePath === '') {
-                throw new RuntimeException('PDF yükleyin veya dosya yolu/link girin.');
+            $originalFileName = mx_clean_string((string) ($file['name'] ?? 'fatura.pdf'), 180);
+            $extension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+            $header = (string) file_get_contents((string) $file['tmp_name'], false, null, 0, 4);
+            if ($extension !== 'pdf' || $header !== '%PDF') {
+                throw new RuntimeException('Sadece PDF fatura dosyası yüklenebilir.');
             }
+
+            $customerUploadDir = dirname(__DIR__) . '/uploads/faturalar/' . (int) $customer['id'];
+            if (!is_dir($customerUploadDir) && !mkdir($customerUploadDir, 0755, true) && !is_dir($customerUploadDir)) {
+                throw new RuntimeException('Fatura yükleme klasörü oluşturulamadı.');
+            }
+
+            $safeName = 'fatura-' . (int) $customer['id'] . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(6)) . '.pdf';
+            $targetPath = $customerUploadDir . '/' . $safeName;
+            if (!move_uploaded_file((string) $file['tmp_name'], $targetPath)) {
+                throw new RuntimeException('PDF dosyası kaydedilemedi.');
+            }
+            $filePath = 'uploads/faturalar/' . (int) $customer['id'] . '/' . $safeName;
+            $title = $originalFileName !== '' ? $originalFileName : 'MyExpress fatura PDF';
 
             $hasRequestColumn = mx_column_exists('customer_invoices', 'request_id');
+            $hasPaymentColumn = mx_column_exists('customer_invoices', 'payment_status');
+            $hasOriginalNameColumn = mx_column_exists('customer_invoices', 'original_file_name');
             $requestColumnSql = $hasRequestColumn ? 'request_id, ' : '';
             $requestValueSql = $hasRequestColumn ? ':request_id, ' : '';
             $requestParams = $hasRequestColumn ? [':request_id' => $requestId > 0 ? $requestId : null] : [];
+            $paymentColumnSql = $hasPaymentColumn ? 'payment_status, ' : '';
+            $paymentValueSql = $hasPaymentColumn ? ':payment_status, ' : '';
+            $paymentParams = $hasPaymentColumn ? [':payment_status' => $paymentStatus] : [];
+            $originalNameColumnSql = $hasOriginalNameColumn ? 'original_file_name, ' : '';
+            $originalNameValueSql = $hasOriginalNameColumn ? ':original_file_name, ' : '';
+            $originalNameParams = $hasOriginalNameColumn ? [':original_file_name' => $originalFileName] : [];
 
             $stmt = $pdo->prepare(
-                'INSERT INTO customer_invoices (customer_id, ' . $requestColumnSql . 'invoice_no, title, amount, invoice_date, file_path, status, uploaded_by)
-                 VALUES (:customer_id, ' . $requestValueSql . ':invoice_no, :title, :amount, :invoice_date, :file_path, :status, :uploaded_by)'
+                'INSERT INTO customer_invoices (customer_id, ' . $requestColumnSql . 'invoice_no, title, amount, invoice_date, file_path, status, ' . $paymentColumnSql . $originalNameColumnSql . 'uploaded_by)
+                 VALUES (:customer_id, ' . $requestValueSql . ':invoice_no, :title, :amount, :invoice_date, :file_path, :status, ' . $paymentValueSql . $originalNameValueSql . ':uploaded_by)'
             );
             $stmt->execute([
                 ':customer_id' => (int) $customer['id'],
-                ':invoice_no' => $invoiceNo,
+                ':invoice_no' => null,
                 ':title' => $title,
-                ':amount' => $amount,
-                ':invoice_date' => $invoiceDate !== '' ? $invoiceDate : null,
+                ':amount' => null,
+                ':invoice_date' => null,
                 ':file_path' => $filePath,
-                ':status' => mx_clean_string($_POST['status'] ?? 'available', 32),
+                ':status' => $status,
                 ':uploaded_by' => mx_panel_user(),
-            ] + $requestParams);
-            mx_audit_log($requestId > 0 ? $requestId : null, 'customer_invoice_create', $customer['email'] . ' müşterisine fatura tanımlandı: ' . $title);
-            $message = 'Fatura tanımlandı.';
+            ] + $requestParams + $paymentParams + $originalNameParams);
+            mx_audit_log($requestId > 0 ? $requestId : null, 'customer_invoice_create', $customer['email'] . ' müşterisine PDF fatura yüklendi: ' . $title);
+            $message = 'PDF fatura yüklendi.';
         }
 
         if ($action === 'delete_invoice') {
             $invoiceId = (int) ($_POST['invoice_id'] ?? 0);
-            $target = $pdo->prepare('SELECT title FROM customer_invoices WHERE id = :id AND customer_id = :customer_id');
+            $target = $pdo->prepare('SELECT title, file_path FROM customer_invoices WHERE id = :id AND customer_id = :customer_id');
             $target->execute([':id' => $invoiceId, ':customer_id' => (int) $customer['id']]);
             $invoice = $target->fetch();
             if (!$invoice) {
@@ -120,6 +124,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':id' => $invoiceId,
                 ':customer_id' => (int) $customer['id'],
             ]);
+            $absoluteInvoicePath = mx_invoice_absolute_path((string) ($invoice['file_path'] ?? ''));
+            if ($absoluteInvoicePath !== null) {
+                @unlink($absoluteInvoicePath);
+            }
             mx_audit_log(null, 'customer_invoice_delete', $customer['email'] . ' müşterisinin faturası silindi: ' . $invoice['title']);
             $message = 'Fatura silindi.';
         }
@@ -181,10 +189,6 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
           <input type="hidden" name="action" value="create_invoice">
           <input type="hidden" name="customer_id" value="<?= (int) $customer['id'] ?>">
           <div class="panel-edit-grid invoice-form-grid">
-            <label>Başlık <input name="title" placeholder="Mayıs 2026 kurye faturası" required></label>
-            <label>Fatura no <input name="invoice_no" placeholder="Opsiyonel"></label>
-            <label>Tutar <input name="amount" inputmode="decimal" placeholder="0,00"></label>
-            <label>Fatura tarihi <input type="date" name="invoice_date"></label>
             <label>İlgili talep
               <select name="request_id">
                 <option value="0">Genel müşteri faturası</option>
@@ -199,11 +203,16 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
                 <option value="draft">Taslak</option>
               </select>
             </label>
-            <label>Fatura PDF <input type="file" name="invoice_pdf" accept="application/pdf"></label>
-            <label>Dosya yolu / link <input name="file_path" placeholder="PDF yüklenmezse link girin"></label>
+            <label>Ödeme durumu
+              <select name="payment_status">
+                <option value="unpaid">Ödenmedi</option>
+                <option value="paid">Ödendi</option>
+              </select>
+            </label>
+            <label>Fatura PDF <input type="file" name="invoice_pdf" accept="application/pdf" required></label>
           </div>
           <button class="btn btn-primary" type="submit">Fatura Kaydet</button>
-          <p class="panel-help-text">PDF yükleyebilir veya harici/daha önce yüklenmiş dosya linki tanımlayabilirsiniz. Talep seçilirse fatura müşteriyle birlikte ilgili talebe de bağlanır.</p>
+          <p class="panel-help-text">Sadece PDF yüklenir. Dosya sistem tarafından güvenli bir adla müşteri klasörüne alınır; müşteri faturaya hesabından erişir.</p>
         </form>
         <article class="panel-card">
           <h2>Müşteri</h2>
@@ -222,12 +231,11 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
         </div>
         <div class="panel-table-wrap">
           <table class="panel-table audit-table">
-            <thead><tr><th>Fatura</th><th>No</th><th>Talep</th><th>Tutar</th><th>Tarih</th><th>Dosya</th><th>İşlem</th></tr></thead>
+            <thead><tr><th>Fatura</th><th>Talep</th><th>Yayın</th><th>Ödeme</th><th>Yükleme</th><th>Dosya</th><th>İşlem</th></tr></thead>
             <tbody>
               <?php foreach ($invoices as $invoice): ?>
                 <tr>
-                  <td><?= mx_h($invoice['title']) ?><br><small><?= mx_h($invoice['status']) ?></small></td>
-                  <td><?= mx_h($invoice['invoice_no'] ?: '-') ?></td>
+                  <td><?= mx_h($invoice['original_file_name'] ?? $invoice['title']) ?></td>
                   <td>
                     <?php if (!empty($invoice['request_id'])): ?>
                       <a class="tracking-link" href="talep.php?id=<?= (int) $invoice['request_id'] ?>"><?= mx_h($invoice['tracking_code'] ?: '#' . $invoice['request_id']) ?></a>
@@ -235,9 +243,10 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
                       Genel
                     <?php endif; ?>
                   </td>
-                  <td><?= $invoice['amount'] !== null ? mx_h(number_format((float) $invoice['amount'], 2, ',', '.')) . ' TL' : '-' ?></td>
-                  <td><?= $invoice['invoice_date'] ? mx_h(date('d.m.Y', strtotime($invoice['invoice_date']))) : '-' ?></td>
-                  <td><a href="<?= mx_h($invoice['file_path']) ?>" target="_blank" rel="noopener">Aç</a></td>
+                  <td><?= $invoice['status'] === 'available' ? 'Yayında' : 'Taslak' ?></td>
+                  <td><?= ($invoice['payment_status'] ?? 'unpaid') === 'paid' ? 'Ödendi' : 'Ödenmedi' ?></td>
+                  <td><?= mx_h(date('d.m.Y H:i', strtotime((string) $invoice['created_at']))) ?></td>
+                  <td><a href="fatura-indir.php?id=<?= (int) $invoice['id'] ?>" target="_blank" rel="noopener">Aç</a></td>
                   <td>
                     <form method="post" onsubmit="return confirm('Bu fatura tanımı silinsin mi?');">
                       <input type="hidden" name="action" value="delete_invoice">

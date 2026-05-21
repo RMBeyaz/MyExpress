@@ -61,6 +61,8 @@ $checks = [
         'customer_addresses.contact_email' => false,
         'customer_addresses.contact_tckn' => false,
         'customer_invoices.request_id' => false,
+        'customer_invoices.payment_status' => false,
+        'customer_invoices.original_file_name' => false,
     ],
     'write_test' => [
         'requested' => isset($_GET['write']) && $_GET['write'] === '1',
@@ -108,6 +110,8 @@ try {
     $checks['columns']['customer_addresses.contact_email'] = mx_column_exists('customer_addresses', 'contact_email');
     $checks['columns']['customer_addresses.contact_tckn'] = mx_column_exists('customer_addresses', 'contact_tckn');
     $checks['columns']['customer_invoices.request_id'] = mx_column_exists('customer_invoices', 'request_id');
+    $checks['columns']['customer_invoices.payment_status'] = mx_column_exists('customer_invoices', 'payment_status');
+    $checks['columns']['customer_invoices.original_file_name'] = mx_column_exists('customer_invoices', 'original_file_name');
     if ($checks['tables']['pricing_settings']) {
         $pricing = mx_pricing_settings();
         $checks['pricing']['settings_loaded'] = true;

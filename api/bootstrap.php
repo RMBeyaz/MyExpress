@@ -464,6 +464,62 @@ function mx_whatsapp_url(string $phone, string $message = ''): string
     return 'https://wa.me/' . $digits . ($message !== '' ? '?text=' . rawurlencode($message) : '');
 }
 
+function mx_invoice_absolute_path(string $filePath): ?string
+{
+    $filePath = trim($filePath);
+    if ($filePath === '') {
+        return null;
+    }
+
+    $root = dirname(__DIR__);
+    $base = realpath($root . '/uploads/faturalar');
+    if ($base === false) {
+        return null;
+    }
+
+    $relative = preg_replace('#^https?://[^/]+/kurye/#i', '', $filePath) ?? $filePath;
+    $relative = preg_replace('#^/kurye/#', '', $relative) ?? $relative;
+    $relative = preg_replace('#^/+#', '', $relative) ?? $relative;
+    $relative = preg_replace('#^uploads/faturalar/#', '', $relative) ?? $relative;
+    $relative = str_replace('\\', '/', $relative);
+
+    if ($relative === '' || str_contains($relative, '..')) {
+        return null;
+    }
+
+    $target = realpath($base . '/' . $relative);
+    if ($target === false || !str_starts_with($target, $base . DIRECTORY_SEPARATOR)) {
+        return null;
+    }
+
+    return is_file($target) ? $target : null;
+}
+
+function mx_stream_invoice_pdf(array $invoice): void
+{
+    $path = mx_invoice_absolute_path((string) ($invoice['file_path'] ?? ''));
+    if ($path === null) {
+        http_response_code(404);
+        echo 'Fatura dosyası bulunamadı.';
+        exit;
+    }
+
+    $downloadName = mx_clean_string($invoice['original_file_name'] ?? '', 180);
+    if ($downloadName === '') {
+        $downloadName = mx_clean_string($invoice['title'] ?? 'myexpress-fatura.pdf', 180);
+    }
+    if (!str_ends_with(strtolower($downloadName), '.pdf')) {
+        $downloadName .= '.pdf';
+    }
+
+    header('Content-Type: application/pdf');
+    header('Content-Length: ' . filesize($path));
+    header('Content-Disposition: inline; filename="' . str_replace('"', '', $downloadName) . '"');
+    header('X-Content-Type-Options: nosniff');
+    readfile($path);
+    exit;
+}
+
 function mx_default_pricing_settings(): array
 {
     return [

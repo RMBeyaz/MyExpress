@@ -303,7 +303,6 @@ if (mx_table_exists('couriers')) {
         <div class="panel-header-actions">
           <a class="btn btn-secondary" href="index.php">Talepler</a>
           <a class="btn btn-secondary" href="musteriler.php">Müşteriler</a>
-          <a class="btn btn-secondary" href="talep-ekle.php">Manuel Talep</a>
           <?php if (mx_panel_can_manage_pricing()): ?>
             <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
           <?php endif; ?>

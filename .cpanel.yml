@@ -4,6 +4,7 @@ deployment:
     - export DEPLOYPATH=/home/myexpresscom/public_html/kurye/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/uploads/faturalar
+    - /bin/cp uploads/faturalar/.htaccess $DEPLOYPATH/uploads/faturalar/.htaccess
     - /bin/cp -R assets $DEPLOYPATH
     - /bin/cp -R api $DEPLOYPATH
     - /bin/cp -R hesabim $DEPLOYPATH

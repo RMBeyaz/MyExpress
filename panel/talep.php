@@ -269,7 +269,6 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
         <div class="panel-header-actions">
           <span class="panel-status panel-status-<?= mx_h($request['status']) ?>"><?= mx_h(mx_status_label($request['status'])) ?></span>
           <button class="btn btn-danger" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>">Talebi Sil</button>
-          <a class="btn btn-secondary" href="talep-ekle.php">Manuel Talep</a>
           <a class="btn btn-secondary" href="index.php">Listeye Dön</a>
         </div>
       </section>
