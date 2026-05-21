@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/myexpresscom/public_html/kurye/
+    - export DEPLOYPATH=/home/myexpresscom/public_html/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/uploads/faturalar
     - /bin/cp uploads/faturalar/.htaccess $DEPLOYPATH/uploads/faturalar/.htaccess

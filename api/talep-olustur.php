@@ -265,7 +265,7 @@ try {
             'Teslim: ' . mx_clean_string($payload['dropoff'], 255),
             'Gonderici: ' . mx_clean_string($payload['senderName'], 120) . ' - ' . mx_clean_string($payload['senderPhone'], 40),
             'Alici: ' . mx_clean_string($payload['recipientName'], 120) . ' - ' . mx_clean_string($payload['recipientPhone'], 40),
-            'Panel: https://myexpress.com.tr/kurye/panel/',
+            'Panel: https://myexpress.com.tr/panel/',
         ]);
 
         if (function_exists('mail')) {

@@ -416,7 +416,7 @@ if (mx_panel_is_logged_in()) {
                       . 'Gönderici: ' . $request['sender_name'] . ' - ' . $request['sender_phone'] . "\n"
                       . 'Alıcı: ' . $request['recipient_name'] . ' - ' . $request['recipient_phone'] . "\n"
                       . 'Ücret: ' . $request['price'] . "\n"
-                      . 'Panel: https://www.myexpress.com.tr/kurye/panel/talep.php?id=' . (int) $request['id'];
+                      . 'Panel: https://www.myexpress.com.tr/panel/talep.php?id=' . (int) $request['id'];
                   ?>
                   <tr class="request-row request-row-<?= mx_h($request['status']) ?>">
                     <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
