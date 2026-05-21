@@ -2963,6 +2963,67 @@ h3 {
   text-align: center;
 }
 
+.panel-body .request-table {
+  min-width: 1240px;
+}
+
+.panel-body .request-table th,
+.panel-body .request-table td {
+  padding: 13px 14px;
+}
+
+.panel-body .request-table th:nth-child(1),
+.panel-body .request-table td:nth-child(1) {
+  width: 132px;
+}
+
+.panel-body .request-table th:nth-child(2),
+.panel-body .request-table td:nth-child(2),
+.panel-body .request-table th:nth-child(3),
+.panel-body .request-table td:nth-child(3) {
+  width: 140px;
+}
+
+.panel-body .request-table th:nth-child(4),
+.panel-body .request-table td:nth-child(4) {
+  width: 320px;
+  padding-right: 24px;
+}
+
+.panel-body .request-table th:nth-child(5),
+.panel-body .request-table td:nth-child(5) {
+  width: 96px;
+}
+
+.panel-body .request-table th:nth-child(6),
+.panel-body .request-table td:nth-child(6) {
+  width: 108px;
+}
+
+.panel-body .request-table th:nth-child(7),
+.panel-body .request-table td:nth-child(7) {
+  width: 100px;
+}
+
+.panel-body .request-table th:nth-child(8),
+.panel-body .request-table td:nth-child(8) {
+  width: 86px;
+}
+
+.panel-body .request-table th:nth-child(9),
+.panel-body .request-table td:nth-child(9) {
+  width: 64px;
+}
+
+.panel-body .request-table th:nth-child(7),
+.panel-body .request-table td:nth-child(7),
+.panel-body .request-table th:nth-child(8),
+.panel-body .request-table td:nth-child(8),
+.panel-body .request-table th:nth-child(9),
+.panel-body .request-table td:nth-child(9) {
+  text-align: center;
+}
+
 .panel-body .tracking-link {
   color: var(--navy);
   font-weight: 900;
@@ -3000,14 +3061,17 @@ h3 {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 8px;
+  align-items: center;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.35;
-  max-width: 230px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .panel-body .route-line + .route-line {
-  margin-top: 5px;
+  margin-top: 7px;
 }
 
 .panel-body .route-label {
@@ -3016,6 +3080,19 @@ h3 {
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.panel-body .route-cell {
+  min-width: 0;
+}
+
+.panel-body .route-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-body .wa-icon {

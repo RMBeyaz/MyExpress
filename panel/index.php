@@ -110,11 +110,23 @@ $shortRouteArea = static function (string $area, ?string $district = null): stri
     $district = trim((string) $district);
     $parts = array_values(array_filter(array_map('trim', preg_split('/[,\/]+/', $area) ?: [])));
     $district = preg_replace('/\s+\/\s+.*$/', '', $district) ?? $district;
+    $district = preg_replace('/\b(İstanbul|Istanbul)\b/iu', '', $district) ?? $district;
+    $district = trim($district);
     $neighborhood = '';
     $cleanParts = [];
     $toLower = static fn (string $value): string => function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+    $cleanName = static function (string $value): string {
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+        $value = preg_replace('/\b(İstanbul|Istanbul)\b/iu', '', $value) ?? $value;
+        $value = preg_replace('/\s+Mah(?:allesi)?\.?$/iu', ' Mahallesi', $value) ?? $value;
+        return trim($value, " \t\n\r\0\x0B-/");
+    };
 
     foreach ($parts as $part) {
+        $part = $cleanName($part);
+        if ($part === '') {
+            continue;
+        }
         $lower = $toLower($part);
         if (preg_match('/\b(sokak|sok\.|sk\.|cadde|cad\.|cd\.|bulvar|blv\.|no|apt|daire|kat)\b/u', $lower)) {
             continue;
@@ -131,6 +143,7 @@ $shortRouteArea = static function (string $area, ?string $district = null): stri
     if ($district === '' && count($cleanParts) >= 2) {
         $district = (string) end($cleanParts);
     }
+    $district = $cleanName($district);
     if ($neighborhood === '') {
         foreach ($cleanParts as $part) {
             if ($district === '' || $toLower($part) !== $toLower($district)) {
@@ -354,7 +367,7 @@ if (mx_panel_is_logged_in()) {
             <?php endforeach; ?>
           </div>
           <div class="panel-table-wrap">
-            <table class="panel-table">
+            <table class="panel-table request-table">
               <thead>
                 <tr>
                   <th><a class="sort-link" href="<?= mx_h($sortUrl('tracking')) ?>">Talep<?= mx_h($sortMark('tracking')) ?></a></th>
@@ -387,7 +400,10 @@ if (mx_panel_is_logged_in()) {
                     <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
                     <td><span class="person-name"><?= mx_h($request['sender_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['sender_phone'])) ?>" target="_blank" rel="noopener" aria-label="Gönderici WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['sender_phone']) ?>"><small><?= mx_h($request['sender_phone']) ?></small></a></td>
                     <td><span class="person-name"><?= mx_h($request['recipient_name']) ?></span> <a class="wa-icon" href="<?= mx_h(mx_whatsapp_url($request['recipient_phone'])) ?>" target="_blank" rel="noopener" aria-label="Alıcı WhatsApp"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3.2A12.6 12.6 0 0 0 5.3 22.4L4 29l6.8-1.8A12.58 12.58 0 1 0 16.04 3.2Zm0 22.9c-2.1 0-4.05-.62-5.7-1.7l-.4-.25-4 .98.98-3.9-.26-.42a10.05 10.05 0 1 1 9.38 5.29Zm5.8-7.52c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.32-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.15-.15.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg></a><br><a href="tel:<?= mx_h($request['recipient_phone']) ?>"><small><?= mx_h($request['recipient_phone']) ?></small></a></td>
-                    <td><span class="route-line"><span class="route-label">Alım</span> <?= mx_h($pickupShort) ?></span><span class="route-line"><span class="route-label">Teslim</span> <?= mx_h($dropoffShort) ?></span></td>
+                    <td class="route-cell" title="<?= mx_h('Alım: ' . $pickupShort . ' | Teslim: ' . $dropoffShort) ?>">
+                      <span class="route-line"><span class="route-label">Alım</span><span class="route-text"><?= mx_h($pickupShort) ?></span></span>
+                      <span class="route-line"><span class="route-label">Teslim</span><span class="route-text"><?= mx_h($dropoffShort) ?></span></span>
+                    </td>
                     <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
                     <td><?= mx_h($request['price']) ?></td>
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>

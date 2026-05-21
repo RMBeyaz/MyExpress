@@ -11,6 +11,9 @@ $customerId = mx_customer_id();
 $message = '';
 $error = '';
 $editAddress = null;
+if (($_GET['notice'] ?? '') === 'updated') {
+    $message = 'Adres güncellendi.';
+}
 if (isset($_GET['edit']) && mx_table_exists('customer_addresses')) {
     $editStmt = $pdo->prepare('SELECT * FROM customer_addresses WHERE id = :id AND customer_id = :customer_id LIMIT 1');
     $editStmt->execute([':id' => (int) $_GET['edit'], ':customer_id' => $customerId]);
@@ -77,7 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      WHERE id = :id AND customer_id = :customer_id'
                 );
                 $stmt->execute($params);
-                $message = 'Adres güncellendi.';
+                header('Location: adresler.php?notice=updated');
+                exit;
             } else {
                 $stmt = $pdo->prepare(
                     'INSERT INTO customer_addresses (customer_id, title, contact_name, contact_phone, contact_email, contact_tckn, area, lat, lng, address_text, is_default)
@@ -108,7 +112,7 @@ mx_account_header('Adreslerim', 'addresses');
 </section>
 <?php mx_account_flash($message, $error); ?>
 <section class="account-grid-2">
-  <form class="account-card account-form" method="post" data-account-address-form>
+  <form class="account-card account-form" method="post" data-account-address-form<?= $editAddress ? ' data-confirm-update="true"' : '' ?>>
     <h2><?= $editAddress ? 'Adresi düzenle' : 'Yeni adres' ?></h2>
     <input type="hidden" name="action" value="<?= $editAddress ? 'update' : 'create' ?>">
     <input type="hidden" name="id" value="<?= $editAddress ? (int) $editAddress['id'] : 0 ?>">

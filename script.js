@@ -807,6 +807,10 @@ accountAddressForm?.addEventListener('submit', (event) => {
   }
 
   setFieldError(areaInput, '');
+  if (accountAddressForm.dataset.confirmUpdate === 'true' && !window.confirm('Bu adres için yaptığınız değişiklikler kaydedilsin mi?')) {
+    event.preventDefault();
+    return;
+  }
   latInput.value = selectedArea.lat;
   lngInput.value = selectedArea.lng;
 });
