@@ -54,6 +54,9 @@ $checks = [
         'courier_requests.dropoff_district' => false,
         'courier_requests.dropoff_road' => false,
         'courier_requests.dropoff_building_no' => false,
+        'customers.tckn' => false,
+        'customer_addresses.contact_email' => false,
+        'customer_addresses.contact_tckn' => false,
     ],
     'write_test' => [
         'requested' => isset($_GET['write']) && $_GET['write'] === '1',
@@ -97,6 +100,9 @@ try {
     foreach (['pickup_city', 'pickup_district', 'pickup_road', 'pickup_building_no', 'dropoff_city', 'dropoff_district', 'dropoff_road', 'dropoff_building_no'] as $column) {
         $checks['columns']['courier_requests.' . $column] = mx_column_exists('courier_requests', $column);
     }
+    $checks['columns']['customers.tckn'] = mx_column_exists('customers', 'tckn');
+    $checks['columns']['customer_addresses.contact_email'] = mx_column_exists('customer_addresses', 'contact_email');
+    $checks['columns']['customer_addresses.contact_tckn'] = mx_column_exists('customer_addresses', 'contact_tckn');
     if ($checks['tables']['pricing_settings']) {
         $pricing = mx_pricing_settings();
         $checks['pricing']['settings_loaded'] = true;

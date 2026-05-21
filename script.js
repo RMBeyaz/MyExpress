@@ -666,6 +666,10 @@ const fillDetailFormFromParams = () => {
     'dropoff',
     'pickupStreet',
     'dropoffStreet',
+    'recipientName',
+    'recipientPhone',
+    'recipientEmail',
+    'recipientTckn',
   ].forEach((name) => {
     const input = detailForm.elements[name];
     const value = params.get(name);
@@ -690,6 +694,32 @@ const fillDetailFormFromParams = () => {
       if (districtInput && !districtInput.value.trim()) districtInput.value = districtFromDisplay(input.value);
     }
   });
+};
+
+const applyCustomerSessionToRequestForm = async () => {
+  if (!detailForm) return;
+
+  try {
+    const response = await fetch('api/customer-session.php', { headers: { Accept: 'application/json' } });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.ok || !data.loggedIn || !data.customer) return;
+
+    document.querySelector('.account-inline-cta')?.setAttribute('hidden', '');
+    const map = {
+      senderName: data.customer.name,
+      senderPhone: data.customer.phone,
+      senderEmail: data.customer.email,
+      senderTckn: data.customer.tckn,
+    };
+
+    Object.entries(map).forEach(([name, value]) => {
+      const input = detailForm.elements[name];
+      if (input && value && !input.value.trim()) input.value = value;
+    });
+  } catch (error) {
+    // Oturum kontrolü talep formunu engellemez; sadece otomatik doldurma için kullanılır.
+  }
 };
 
 detailForm?.addEventListener('submit', (event) => {
@@ -773,6 +803,7 @@ detailForm?.addEventListener('submit', (event) => {
 });
 
 fillDetailFormFromParams();
+applyCustomerSessionToRequestForm();
 
 accountAddressForm?.addEventListener('submit', (event) => {
   const areaInput = accountAddressForm.elements.area;

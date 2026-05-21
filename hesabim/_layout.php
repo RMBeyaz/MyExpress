@@ -13,7 +13,7 @@ function mx_account_header(string $title, string $active = ''): void
     <title><?= mx_h($title) ?> | MyExpress Hesabım</title>
     <meta name="description" content="MyExpress müşteri hesabı ile kayıtlı adreslerinizi, kurye taleplerinizi ve faturalarınızı görüntüleyin.">
     <link rel="icon" type="image/png" href="../assets/Logo.png">
-    <link rel="stylesheet" href="../styles.css?v=20260521-mobile-menu-float">
+    <link rel="stylesheet" href="../styles.css?v=20260521-account-polish">
   </head>
   <body class="account-body">
     <header class="account-header">
@@ -41,13 +41,35 @@ function mx_account_footer(): void
 {
     ?>
     </main>
-    <footer class="account-footer">
-      <span>MyExpress Kurye</span>
-      <a href="tel:+905467691904">Hemen Ara</a>
-      <a href="mailto:info@myexpress.com.tr">E-posta Gönder</a>
-      <a href="https://wa.me/905467691904" target="_blank" rel="noopener">WhatsApp'tan Yaz</a>
+    <footer class="site-footer account-site-footer">
+      <div>
+        <a class="brand footer-brand" href="../index.html"><img src="../assets/Logo_white.svg" alt="MyExpress İstanbul içi kurye hizmeti" width="220" height="82"></a>
+        <p>İstanbul içi evrak, paket, numune, e-ticaret ve kurumsal dağıtım ihtiyaçları için motorlu ve araçlı kurye çözümleri.</p>
+      </div>
+      <address>
+        <strong>İletişim</strong>
+        <a href="tel:+905467691904">0546 769 19 04</a>
+        <a href="mailto:info@myexpress.com.tr">info@myexpress.com.tr</a>
+        <span>Küçüksu Mah. Adaş Sk. Gül No:39 İç Kapı No:5 Üsküdar / İSTANBUL</span>
+        <a href="https://wa.me/905467691904" target="_blank" rel="noopener">WhatsApp'tan Yaz</a>
+      </address>
+      <div class="footer-links">
+        <strong>Hesap</strong>
+        <a href="index.php">Hesap Özeti</a>
+        <a href="adresler.php">Adreslerim</a>
+        <a href="talepler.php">Taleplerim</a>
+        <a href="faturalar.php">Faturalarım</a>
+      </div>
+      <div class="footer-links">
+        <strong>Bilgilendirme</strong>
+        <a href="../takip.html">Gönderi Durumu Takibi</a>
+        <a href="../kvkk-politikasi.html">KVKK Aydınlatma Metni</a>
+        <a href="../teslimat-sartlari.html">Teslimat Şartları</a>
+        <a href="../yasakli-gonderiler.html">Yasaklı Gönderiler</a>
+      </div>
+      <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="../script.js?v=20260521-mobile-menu-float"></script>
+    <script src="../script.js?v=20260521-account-polish"></script>
   </body>
 </html>
     <?php
@@ -70,6 +92,10 @@ function mx_address_redirect_query(array $pickup, array $dropoff): string
         'pickupLat' => $pickup['lat'],
         'pickupLng' => $pickup['lng'],
         'pickupStreet' => $pickup['address_text'],
+        'recipientName' => $dropoff['contact_name'] ?? '',
+        'recipientPhone' => $dropoff['contact_phone'] ?? '',
+        'recipientEmail' => $dropoff['contact_email'] ?? '',
+        'recipientTckn' => $dropoff['contact_tckn'] ?? '',
         'dropoff' => $dropoff['area'],
         'dropoffLat' => $dropoff['lat'],
         'dropoffLng' => $dropoff['lng'],

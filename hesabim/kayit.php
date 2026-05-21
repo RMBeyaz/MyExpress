@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fullName = mx_clean_string($_POST['full_name'] ?? '', 120);
         $email = mx_clean_string($_POST['email'] ?? '', 160);
         $phone = mx_clean_string($_POST['phone'] ?? '', 40);
+        $tckn = preg_replace('/\D/', '', (string) ($_POST['tckn'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
         $kvkk = isset($_POST['kvkk']);
 
@@ -29,18 +30,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strlen($password) < 8) {
             throw new RuntimeException('Şifre en az 8 karakter olmalı.');
         }
+        if (!mx_valid_tckn($tckn)) {
+            throw new RuntimeException('Geçerli T.C. kimlik numarası girin.');
+        }
         if (!$kvkk) {
             throw new RuntimeException('KVKK bilgilendirmesini onaylamalısınız.');
         }
 
         $stmt = mx_pdo()->prepare(
-            'INSERT INTO customers (full_name, email, phone, password_hash, is_active)
-             VALUES (:full_name, :email, :phone, :password_hash, 1)'
+            'INSERT INTO customers (full_name, email, phone, tckn, password_hash, is_active)
+             VALUES (:full_name, :email, :phone, :tckn, :password_hash, 1)'
         );
         $stmt->execute([
             ':full_name' => $fullName,
             ':email' => $email,
             ':phone' => $phone,
+            ':tckn' => $tckn,
             ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
         ]);
 
@@ -67,6 +72,7 @@ mx_account_header('Üye Ol', 'login');
     <label>Ad soyad<input name="full_name" required autocomplete="name"></label>
     <label>E-posta<input type="email" name="email" required autocomplete="email"></label>
     <label>Telefon<input type="tel" name="phone" required autocomplete="tel"></label>
+    <label>T.C. kimlik no<input name="tckn" required inputmode="numeric" maxlength="11" autocomplete="off"></label>
     <label>Şifre<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
     <label class="account-check"><input type="checkbox" name="kvkk" required><span><a href="../kvkk-politikasi.html" target="_blank">KVKK Aydınlatma Metni</a>'ni okudum ve onaylıyorum.</span></label>
     <button class="btn btn-primary" type="submit">Üye Ol</button>

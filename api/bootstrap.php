@@ -226,8 +226,13 @@ function mx_customer_login(string $email, string $password): bool
             return false;
         }
 
+        $selectColumns = 'id, full_name, email, phone, password_hash, is_active';
+        if (mx_column_exists('customers', 'tckn')) {
+            $selectColumns .= ', tckn';
+        }
+
         $stmt = mx_pdo()->prepare(
-            'SELECT id, full_name, email, password_hash, is_active FROM customers WHERE email = :email LIMIT 1'
+            "SELECT {$selectColumns} FROM customers WHERE email = :email LIMIT 1"
         );
         $stmt->execute([':email' => $email]);
         $customer = $stmt->fetch();
@@ -241,6 +246,8 @@ function mx_customer_login(string $email, string $password): bool
         $_SESSION['mx_customer_id'] = (int) $customer['id'];
         $_SESSION['mx_customer_email'] = (string) $customer['email'];
         $_SESSION['mx_customer_name'] = (string) $customer['full_name'];
+        $_SESSION['mx_customer_phone'] = (string) ($customer['phone'] ?? '');
+        $_SESSION['mx_customer_tckn'] = (string) ($customer['tckn'] ?? '');
         $_SESSION['mx_customer_last_activity'] = time();
 
         mx_pdo()->prepare('UPDATE customers SET last_login_at = NOW() WHERE id = :id')->execute([
@@ -287,6 +294,8 @@ function mx_customer_logout(): void
         'mx_customer_id',
         'mx_customer_email',
         'mx_customer_name',
+        'mx_customer_phone',
+        'mx_customer_tckn',
         'mx_customer_last_activity',
     ] as $key) {
         unset($_SESSION[$key]);
@@ -301,6 +310,21 @@ function mx_customer_id(): ?int
 function mx_customer_name(): string
 {
     return (string) ($_SESSION['mx_customer_name'] ?? '');
+}
+
+function mx_customer_email(): string
+{
+    return (string) ($_SESSION['mx_customer_email'] ?? '');
+}
+
+function mx_customer_phone(): string
+{
+    return (string) ($_SESSION['mx_customer_phone'] ?? '');
+}
+
+function mx_customer_tckn(): string
+{
+    return (string) ($_SESSION['mx_customer_tckn'] ?? '');
 }
 
 function mx_statuses(): array

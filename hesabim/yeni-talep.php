@@ -10,11 +10,18 @@ $pdo = mx_pdo();
 $customerId = mx_customer_id();
 $error = '';
 $addresses = [];
+$defaultAddressId = 0;
 
 if (mx_table_exists('customer_addresses')) {
     $stmt = $pdo->prepare('SELECT * FROM customer_addresses WHERE customer_id = :customer_id ORDER BY is_default DESC, title ASC');
     $stmt->execute([':customer_id' => $customerId]);
     $addresses = $stmt->fetchAll();
+    foreach ($addresses as $address) {
+        if ((int) $address['is_default'] === 1) {
+            $defaultAddressId = (int) $address['id'];
+            break;
+        }
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -37,10 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-mx_account_header('Kayıtlı Adresle Talep', 'new-request');
+mx_account_header('Yeni Talep', 'new-request');
 ?>
 <section class="account-page-head">
-  <div><p class="eyebrow">Hızlı talep</p><h1>Kayıtlı adresle talep aç</h1></div>
+  <div><p class="eyebrow">Hızlı talep</p><h1>Kayıtlı adresle talep</h1></div>
   <a class="btn btn-secondary" href="adresler.php">Adres Ekle</a>
 </section>
 <?php mx_account_flash('', $error); ?>
@@ -54,7 +61,7 @@ mx_account_header('Kayıtlı Adresle Talep', 'new-request');
         <select name="pickup_address_id" required>
           <option value="">Seçin</option>
           <?php foreach ($addresses as $address): ?>
-            <option value="<?= (int) $address['id'] ?>"><?= mx_h($address['title']) ?> - <?= mx_h($address['area']) ?></option>
+            <option value="<?= (int) $address['id'] ?>" <?= (int) $address['id'] === $defaultAddressId ? 'selected' : '' ?>><?= mx_h($address['title']) ?> - <?= mx_h($address['area']) ?></option>
           <?php endforeach; ?>
         </select>
       </label>

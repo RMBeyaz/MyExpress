@@ -93,6 +93,32 @@ select {
   color: var(--red);
 }
 
+.header-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--navy);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.header-icon-link:hover {
+  color: var(--red);
+  border-color: rgba(239, 68, 56, 0.28);
+  transform: translateY(-1px);
+}
+
+.header-icon-link svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+}
+
 .nav-dropdown {
   position: relative;
 }
@@ -2271,7 +2297,8 @@ h3 {
   }
 
   .site-header.is-open .header-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 42px 42px;
+    align-items: center;
     gap: 8px;
     padding: 10px 12px 12px;
     background: #f4f7f8;
@@ -2323,6 +2350,15 @@ h3 {
     border-radius: 8px;
     font-size: 13px;
     font-weight: 800;
+  }
+
+  .site-header.is-open .header-actions .header-icon-link {
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    color: var(--navy);
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(11, 34, 54, 0.08);
   }
 
   .site-header.is-open .header-actions .btn {
@@ -3578,8 +3614,8 @@ h3 {
   margin: 0;
   color: var(--navy);
   font-family: var(--font-heading);
-  font-size: clamp(36px, 6vw, 72px);
-  line-height: 0.95;
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.02;
 }
 
 .account-hero p,
@@ -3631,8 +3667,8 @@ h3 {
   margin: 0 0 16px;
   color: var(--navy);
   font-family: var(--font-heading);
-  font-size: clamp(26px, 3vw, 38px);
-  line-height: 1;
+  font-size: clamp(24px, 2.2vw, 32px);
+  line-height: 1.08;
 }
 
 .account-card-head {
@@ -3683,7 +3719,25 @@ h3 {
 }
 
 .account-address-row {
-  grid-template-columns: minmax(130px, 0.7fr) minmax(170px, 1fr) minmax(220px, 2fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+}
+
+.account-address-row > span,
+.account-address-row > small {
+  grid-column: 1 / -1;
+}
+
+.account-address-row small {
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.account-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .account-form {
@@ -3699,6 +3753,14 @@ h3 {
   gap: 18px;
 }
 
+.account-auth {
+  align-items: start;
+}
+
+.account-auth .eyebrow {
+  margin-bottom: 10px;
+}
+
 .account-form label {
   display: grid;
   gap: 7px;
@@ -3710,19 +3772,32 @@ h3 {
 .account-form select,
 .account-form textarea {
   width: 100%;
-  min-height: 46px;
-  padding: 10px 12px;
+  min-height: 52px;
+  padding: 12px 13px;
   color: var(--navy);
   background: #fff;
   border: 1px solid #d6dee4;
   border-radius: 8px;
   font: inherit;
   font-weight: 700;
+  line-height: 1.25;
+}
+
+.account-form select {
+  appearance: auto;
+  padding-right: 34px;
 }
 
 .account-form textarea {
   min-height: 104px;
   resize: vertical;
+}
+
+.account-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .account-check {
@@ -3802,6 +3877,10 @@ h3 {
   padding: 26px;
   color: #dce6ee;
   background: var(--navy);
+}
+
+.account-site-footer {
+  margin-top: 22px;
 }
 
 .account-footer a,
