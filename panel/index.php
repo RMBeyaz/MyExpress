@@ -288,7 +288,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-mobile-menu-float">
+    <link rel="stylesheet" href="../styles.css?v=20260521-panel-customers">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -298,10 +298,14 @@ if (mx_panel_is_logged_in()) {
           <h1>Talep Paneli</h1>
         </div>
         <?php if (mx_panel_is_logged_in()): ?>
-          <div class="panel-header-actions">
-            <?php if (mx_panel_can_manage_pricing()): ?>
-              <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
-            <?php endif; ?>
+        <div class="panel-header-actions">
+          <a class="btn btn-secondary" href="talep-ekle.php">Manuel Talep</a>
+          <?php if (mx_panel_can_manage_users()): ?>
+            <a class="btn btn-secondary" href="musteriler.php">Müşteriler</a>
+          <?php endif; ?>
+          <?php if (mx_panel_can_manage_pricing()): ?>
+            <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
+          <?php endif; ?>
             <?php if (mx_panel_can_manage_users()): ?>
               <a class="btn btn-secondary" href="kullanicilar.php">Kullanıcılar</a>
             <?php endif; ?>

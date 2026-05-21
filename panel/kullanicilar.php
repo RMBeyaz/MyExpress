@@ -291,7 +291,7 @@ if (mx_table_exists('couriers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kullanıcılar | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-mobile-menu-float">
+    <link rel="stylesheet" href="../styles.css?v=20260521-panel-customers">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -302,6 +302,8 @@ if (mx_table_exists('couriers')) {
         </div>
         <div class="panel-header-actions">
           <a class="btn btn-secondary" href="index.php">Talepler</a>
+          <a class="btn btn-secondary" href="musteriler.php">Müşteriler</a>
+          <a class="btn btn-secondary" href="talep-ekle.php">Manuel Talep</a>
           <?php if (mx_panel_can_manage_pricing()): ?>
             <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
           <?php endif; ?>
