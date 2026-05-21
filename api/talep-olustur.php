@@ -51,14 +51,10 @@ try {
     $deliveryTime = mx_clean_string($payload['deliveryTime'] ?? '', 80);
     $deliveryDate = mx_clean_string($payload['deliveryDate'] ?? '', 10);
     $deliveryStartTime = mx_clean_string($payload['deliveryStartTime'] ?? '', 5);
-    $deliveryEndTime = mx_clean_string($payload['deliveryEndTime'] ?? '', 5);
 
-    if ($deliveryTime === 'Belirli saat aralığı') {
-        if (!preg_match('/^\d{2}:\d{2}$/', $deliveryStartTime) || !preg_match('/^\d{2}:\d{2}$/', $deliveryEndTime)) {
-            mx_json(['ok' => false, 'message' => 'Teslimat saat araligi zorunludur.'], 422);
-        }
-        if ($deliveryStartTime >= $deliveryEndTime) {
-            mx_json(['ok' => false, 'message' => 'Teslimat bitis saati baslangictan sonra olmali.'], 422);
+    if ($deliveryTime === 'Belirli saat' || $deliveryTime === 'Belirli saat aralığı') {
+        if (!preg_match('/^\d{2}:\d{2}$/', $deliveryStartTime)) {
+            mx_json(['ok' => false, 'message' => 'Teslimat saati zorunludur.'], 422);
         }
     }
 
@@ -70,8 +66,8 @@ try {
             mx_json(['ok' => false, 'message' => 'Teslimat tarihi bugunden eski olamaz.'], 422);
         }
         $deliveryTime = $deliveryTime . ': ' . $deliveryDate;
-    } elseif ($deliveryTime === 'Belirli saat aralığı') {
-        $deliveryTime = $deliveryTime . ': ' . $deliveryStartTime . ' - ' . $deliveryEndTime;
+    } elseif ($deliveryTime === 'Belirli saat' || $deliveryTime === 'Belirli saat aralığı') {
+        $deliveryTime = 'Belirli saat: ' . $deliveryStartTime;
     }
 
     $stage = 'db-connect';

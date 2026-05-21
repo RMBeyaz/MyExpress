@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/Logo.png">
-    <link rel="stylesheet" href="styles.css?v=20260521-account-polish">
+    <link rel="stylesheet" href="styles.css?v=20260521-request-compact">
   </head>
-  <body>
+  <body class="request-page">
     <header class="site-header" data-header>
       <a class="brand" href="index.html" aria-label="MyExpress ana sayfa">
         <img src="assets/Logo.svg" alt="MyExpress" width="220" height="82">
@@ -58,9 +58,8 @@
         <p>Alım ve teslim adreslerinizi listeden seçip açık adres tarifini ekleyerek talebinizi oluşturabilirsiniz.</p>
       </section>
 
-      <section class="detail-layout detail-layout-compact">
+      <section class="detail-layout detail-layout-compact request-detail-layout">
         <article class="detail-content">
-          <h2>Adres ve gönderi bilgileri</h2>
           <div class="account-inline-cta">
             <div>
               <strong>Üye hesabınız var mı?</strong>
@@ -69,10 +68,16 @@
             <a href="hesabim/" class="btn btn-secondary btn-small">Hesabım</a>
             <a href="hesabim/kayit.php" class="btn btn-primary btn-small">Üye Ol</a>
           </div>
-          <form class="delivery-form detail-form" data-detail-form>
-            <div class="form-section compact-section">
-              <h3>Adres bilgileri</h3>
-              <div class="form-grid">
+          <form class="delivery-form detail-form request-form-card" data-detail-form>
+            <div class="route-contact-grid">
+              <section class="route-card">
+                <div class="route-card-head">
+                  <span>1</span>
+                  <div>
+                    <h3>Alım ve gönderici</h3>
+                    <p>Gönderinin alınacağı adres ve gönderen kişi bilgileri.</p>
+                  </div>
+                </div>
                 <label>
                   Alım bölgesi / mahallesi
                   <div class="autocomplete-field">
@@ -82,6 +87,38 @@
                   <small class="field-help">Listeden mahalle veya semt seçin.</small>
                 </label>
                 <label>
+                  Alım açık adres / tarif
+                  <textarea name="pickupStreet" placeholder="Cadde, sokak, bina no, kat, daire, firma adı, güvenlik veya zil bilgisi" required></textarea>
+                </label>
+                <div class="form-grid identity-grid route-identity-grid">
+                  <label>
+                    Gönderici ad soyad
+                    <input type="text" name="senderName" placeholder="Gönderici adı soyadı" required>
+                  </label>
+                  <label>
+                    Gönderici telefon
+                    <input type="tel" name="senderPhone" placeholder="05xx xxx xx xx" required inputmode="tel">
+                  </label>
+                  <label>
+                    Gönderici e-posta
+                    <input type="email" name="senderEmail" placeholder="ornek@domain.com">
+                  </label>
+                  <label>
+                    Gönderici T.C. kimlik no
+                    <input type="text" name="senderTckn" placeholder="11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" required data-tckn>
+                  </label>
+                </div>
+              </section>
+
+              <section class="route-card">
+                <div class="route-card-head">
+                  <span>2</span>
+                  <div>
+                    <h3>Teslim ve alıcı</h3>
+                    <p>Gönderinin teslim edileceği adres ve alıcı bilgileri.</p>
+                  </div>
+                </div>
+                <label>
                   Teslim bölgesi / mahallesi
                   <div class="autocomplete-field">
                     <input type="text" name="dropoff" placeholder="Örn. Koşuyolu Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
@@ -89,21 +126,32 @@
                   </div>
                   <small class="field-help">Listeden teslim mahallesi veya semti seçin.</small>
                 </label>
-              </div>
-              <div class="form-grid">
-                <label>
-                  Alım açık adres / tarif
-                  <textarea name="pickupStreet" placeholder="Cadde, sokak, bina no, kat, daire, firma adı, güvenlik veya zil bilgisi" required></textarea>
-                </label>
                 <label>
                   Teslim açık adres / tarif
                   <textarea name="dropoffStreet" placeholder="Cadde, sokak, bina no, kat, daire, alıcı noktası veya teslim tarifi" required></textarea>
                 </label>
-              </div>
-              <small class="field-help">Adres alanından mahalle/semt seçin; açık adres kısmına cadde, sokak, bina ve tarif bilgilerini yazın.</small>
+                <div class="form-grid identity-grid route-identity-grid">
+                  <label>
+                    Alıcı ad soyad
+                    <input type="text" name="recipientName" placeholder="Alıcı adı soyadı" required>
+                  </label>
+                  <label>
+                    Alıcı telefon
+                    <input type="tel" name="recipientPhone" placeholder="05xx xxx xx xx" required inputmode="tel">
+                  </label>
+                  <label>
+                    Alıcı e-posta
+                    <input type="email" name="recipientEmail" placeholder="İsteğe bağlı">
+                  </label>
+                  <label>
+                    Alıcı T.C. kimlik no <small class="optional-label">İsteğe bağlı</small>
+                    <input type="text" name="recipientTckn" placeholder="Varsa 11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" data-tckn>
+                  </label>
+                </div>
+              </section>
             </div>
 
-            <div class="form-section compact-section">
+            <div class="form-section compact-section shipment-section">
               <h3>Hizmet ve paket</h3>
               <div class="option-grid">
                 <div class="choice-group">
@@ -133,7 +181,7 @@
                   <select name="deliveryTime">
                     <option>En kısa sürede</option>
                     <option>Bugün içinde</option>
-                    <option>Belirli saat aralığı</option>
+                    <option>Belirli saat</option>
                     <option>İleri tarihli teslimat</option>
                     <option>Gece teslimat</option>
                   </select>
@@ -149,12 +197,8 @@
                   <input type="date" name="deliveryDate" disabled>
                 </label>
                 <label data-schedule-time hidden>
-                  Başlangıç saati
+                  Teslim saati
                   <input type="time" name="deliveryStartTime" disabled>
-                </label>
-                <label data-schedule-time hidden>
-                  Bitiş saati
-                  <input type="time" name="deliveryEndTime" disabled>
                 </label>
               </div>
             </div>
@@ -175,48 +219,6 @@
               </div>
             </div>
 
-            <div class="form-section compact-section">
-              <h3>Gönderici bilgileri</h3>
-              <div class="form-grid identity-grid">
-                <label>
-                  Ad soyad
-                  <input type="text" name="senderName" placeholder="Gönderici adı soyadı" required>
-                </label>
-                <label>
-                  Telefon
-                  <input type="tel" name="senderPhone" placeholder="05xx xxx xx xx" required inputmode="tel">
-                </label>
-                <label>
-                  E-posta
-                  <input type="email" name="senderEmail" placeholder="ornek@domain.com">
-                </label>
-                <label>
-                  T.C. kimlik no
-                  <input type="text" name="senderTckn" placeholder="11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" required data-tckn>
-                </label>
-              </div>
-            </div>
-            <div class="form-section compact-section">
-              <h3>Alıcı bilgileri</h3>
-              <div class="form-grid identity-grid">
-                <label>
-                  Ad soyad
-                  <input type="text" name="recipientName" placeholder="Alıcı adı soyadı" required>
-                </label>
-                <label>
-                  Telefon
-                  <input type="tel" name="recipientPhone" placeholder="05xx xxx xx xx" required inputmode="tel">
-                </label>
-                <label>
-                  E-posta
-                  <input type="email" name="recipientEmail" placeholder="İsteğe bağlı">
-                </label>
-                <label>
-                  T.C. kimlik no <small class="optional-label">İsteğe bağlı</small>
-                  <input type="text" name="recipientTckn" placeholder="Varsa 11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" data-tckn>
-                </label>
-              </div>
-            </div>
             <div class="consent-box">
               <label>
                 <input type="checkbox" name="serviceAgreement" required>
@@ -240,6 +242,6 @@
       <div class="footer-links"><strong>Bilgilendirme</strong><a href="takip.html">Gönderi Durumu Takibi</a><a href="gizlilik-politikasi.html">Gizlilik Politikası</a><a href="kvkk-politikasi.html">KVKK Aydınlatma Metni</a><a href="teslimat-sartlari.html">Teslimat Şartları</a><a href="yasakli-gonderiler.html">Yasaklı Gönderiler</a><a href="sss.html">Sıkça Sorulan Sorular</a></div>
       <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="script.js?v=20260521-account-polish"></script>
+    <script src="script.js?v=20260521-request-compact"></script>
   </body>
 </html>

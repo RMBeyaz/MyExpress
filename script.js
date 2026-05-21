@@ -242,12 +242,11 @@ const updateScheduleFields = () => {
   if (!detailForm || !scheduleFields) return;
 
   const value = detailForm.elements.deliveryTime?.value || '';
-  const requiresTime = value === 'Belirli saat aralığı';
+  const requiresTime = value === 'Belirli saat' || value === 'Belirli saat aralığı';
   const requiresDate = value === 'İleri tarihli teslimat';
   const hasScheduleChoice = requiresTime || requiresDate;
   const dateInput = detailForm.elements.deliveryDate;
   const startInput = detailForm.elements.deliveryStartTime;
-  const endInput = detailForm.elements.deliveryEndTime;
 
   scheduleFields.hidden = !hasScheduleChoice;
   if (scheduleDateField) scheduleDateField.hidden = !requiresDate;
@@ -261,12 +260,11 @@ const updateScheduleFields = () => {
     dateInput.min = new Date().toISOString().slice(0, 10);
     if (!requiresDate) dateInput.value = '';
   }
-  [startInput, endInput].forEach((input) => {
-    if (!input) return;
-    input.required = requiresTime;
-    input.disabled = !requiresTime;
-    if (!requiresTime) input.value = '';
-  });
+  if (startInput) {
+    startInput.required = requiresTime;
+    startInput.disabled = !requiresTime;
+    if (!requiresTime) startInput.value = '';
+  }
 };
 
 const updatePriceEstimate = () => {
@@ -745,16 +743,6 @@ detailForm?.addEventListener('submit', (event) => {
     invalidTckn.reportValidity();
     return;
   }
-
-  const deliveryTime = detailForm.elements.deliveryTime?.value || '';
-  const startTime = detailForm.elements.deliveryStartTime;
-  const endTime = detailForm.elements.deliveryEndTime;
-  if (deliveryTime === 'Belirli saat aralığı' && startTime?.value && endTime?.value && startTime.value >= endTime.value) {
-    setFieldError(endTime, 'Bitiş saati başlangıçtan sonra olmalı.');
-    endTime.reportValidity();
-    return;
-  }
-  if (endTime) setFieldError(endTime, '');
 
   if (!detailForm.reportValidity()) return;
 
