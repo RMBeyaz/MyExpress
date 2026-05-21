@@ -635,6 +635,7 @@ function mx_route_unavailable(string $status = 'manual_required', ?string $provi
         'route_duration_min' => null,
         'route_provider' => $provider,
         'route_status' => $status,
+        'fallback_reason' => $status,
     ];
 }
 
@@ -645,6 +646,7 @@ function mx_geocode_istanbul_address(string $query): ?array
         return null;
     }
 
+    $searchQuery = preg_match('/istanbul/iu', $query) ? $query : $query . ', İstanbul';
     $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
         'format' => 'jsonv2',
         'limit' => '1',
@@ -652,7 +654,7 @@ function mx_geocode_istanbul_address(string $query): ?array
         'accept-language' => 'tr',
         'viewbox' => '28.01,41.65,29.95,40.72',
         'bounded' => '1',
-        'q' => $query . ', İstanbul',
+        'q' => $searchQuery,
     ]);
 
     try {
@@ -662,11 +664,22 @@ function mx_geocode_istanbul_address(string $query): ?array
                 'header' => 'User-Agent: MyExpressKurye/1.0 (info@myexpress.com.tr)' . "\r\n",
             ],
         ]);
+        error_log('[MyExpress] geocode request | query=' . $query);
         $raw = @file_get_contents($url, false, $context);
-        $data = is_string($raw) ? json_decode($raw, true) : null;
-        if (!is_array($data) || empty($data[0]['lat']) || empty($data[0]['lon'])) {
+        if (!is_string($raw)) {
+            error_log('[MyExpress] geocode network_error | query=' . $query);
             return null;
         }
+        $data = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($data)) {
+            error_log('[MyExpress] geocode invalid_response | query=' . $query);
+            return null;
+        }
+        if (empty($data[0]['lat']) || empty($data[0]['lon'])) {
+            error_log('[MyExpress] geocode no_result | query=' . $query);
+            return null;
+        }
+        error_log('[MyExpress] geocode ok | query=' . $query . ' | lat=' . $data[0]['lat'] . ' | lng=' . $data[0]['lon']);
         return ['lat' => (float) $data[0]['lat'], 'lng' => (float) $data[0]['lon']];
     } catch (Throwable $error) {
         mx_log_error('geocode failed', $error, ['query' => $query]);
@@ -674,12 +687,29 @@ function mx_geocode_istanbul_address(string $query): ?array
     }
 }
 
+function mx_geocode_istanbul_address_candidates(array $candidates): ?array
+{
+    foreach ($candidates as $candidate) {
+        $query = mx_clean_string($candidate, 500);
+        if ($query === '') {
+            continue;
+        }
+        $result = mx_geocode_istanbul_address($query);
+        if ($result) {
+            return $result;
+        }
+    }
+
+    return null;
+}
+
 function mx_route_distance_openroute(array $from, array $to): array
 {
     $config = mx_config();
     $apiKey = trim((string) ($config['openroute_api_key'] ?? $config['ors_api_key'] ?? ''));
     if ($apiKey === '') {
-        return mx_route_unavailable('manual_required', 'openrouteservice');
+        error_log('[MyExpress] routing skipped | provider=openrouteservice | reason=api_key_missing');
+        return mx_route_unavailable('api_key_missing', 'openrouteservice');
     }
 
     $payload = json_encode([
@@ -723,6 +753,7 @@ function mx_route_distance_openroute(array $from, array $to): array
         $data = is_string($raw) ? json_decode($raw, true) : null;
         $summary = $data['features'][0]['properties']['summary'] ?? null;
         if ($status < 200 || $status >= 300 || !is_array($summary) || !isset($summary['distance'])) {
+            error_log('[MyExpress] routing route_failed | provider=openrouteservice | http_status=' . $status);
             return mx_route_unavailable('route_failed', 'openrouteservice');
         }
 
@@ -743,33 +774,50 @@ function mx_calculate_price(array $payload): array
 {
     $config = mx_config();
     $hasRoutingKey = trim((string) ($config['openroute_api_key'] ?? $config['ors_api_key'] ?? '')) !== '';
-    if (!$hasRoutingKey) {
-        return mx_route_unavailable('manual_required', 'openrouteservice');
-    }
 
     $pickupLat = is_numeric($payload['pickupLat'] ?? null) ? (float) $payload['pickupLat'] : null;
     $pickupLng = is_numeric($payload['pickupLng'] ?? null) ? (float) $payload['pickupLng'] : null;
     $dropoffLat = is_numeric($payload['dropoffLat'] ?? null) ? (float) $payload['dropoffLat'] : null;
     $dropoffLng = is_numeric($payload['dropoffLng'] ?? null) ? (float) $payload['dropoffLng'] : null;
 
-    if ($pickupLat === null || $pickupLng === null || $dropoffLat === null || $dropoffLng === null) {
-        $pickupGeo = mx_geocode_istanbul_address(implode(', ', array_filter([
-            $payload['pickupStreet'] ?? '',
-            $payload['pickup'] ?? '',
-            'İstanbul',
-        ])));
-        $dropoffGeo = mx_geocode_istanbul_address(implode(', ', array_filter([
-            $payload['dropoffStreet'] ?? '',
-            $payload['dropoff'] ?? '',
-            'İstanbul',
-        ])));
-        if (!$pickupGeo || !$dropoffGeo) {
-            return mx_route_unavailable('manual_required', null);
+    if ($pickupLat === null || $pickupLng === null) {
+        $pickupGeo = mx_geocode_istanbul_address_candidates([
+            implode(', ', array_filter([$payload['pickupStreet'] ?? '', $payload['pickup'] ?? '', 'İstanbul'])),
+            implode(', ', array_filter([$payload['pickup'] ?? '', 'İstanbul'])),
+        ]);
+        if ($pickupGeo) {
+            $pickupLat = $pickupGeo['lat'];
+            $pickupLng = $pickupGeo['lng'];
         }
-        $pickupLat = $pickupGeo['lat'];
-        $pickupLng = $pickupGeo['lng'];
-        $dropoffLat = $dropoffGeo['lat'];
-        $dropoffLng = $dropoffGeo['lng'];
+    }
+
+    if ($dropoffLat === null || $dropoffLng === null) {
+        $dropoffGeo = mx_geocode_istanbul_address_candidates([
+            implode(', ', array_filter([$payload['dropoffStreet'] ?? '', $payload['dropoff'] ?? '', 'İstanbul'])),
+            implode(', ', array_filter([$payload['dropoff'] ?? '', 'İstanbul'])),
+        ]);
+        if ($dropoffGeo) {
+            $dropoffLat = $dropoffGeo['lat'];
+            $dropoffLng = $dropoffGeo['lng'];
+        }
+    }
+
+    if ($pickupLat === null || $pickupLng === null || $dropoffLat === null || $dropoffLng === null) {
+        $fallback = mx_route_unavailable('geocode_failed', null);
+        $pickupMissing = $pickupLat === null || $pickupLng === null;
+        $dropoffMissing = $dropoffLat === null || $dropoffLng === null;
+        $fallback['geocode_status'] = $pickupMissing && $dropoffMissing ? 'both_failed' : ($pickupMissing ? 'pickup_failed' : 'dropoff_failed');
+        return $fallback;
+    }
+
+    if (!$hasRoutingKey) {
+        $fallback = mx_route_unavailable('api_key_missing', 'openrouteservice');
+        $fallback['pickup_lat'] = $pickupLat;
+        $fallback['pickup_lng'] = $pickupLng;
+        $fallback['dropoff_lat'] = $dropoffLat;
+        $fallback['dropoff_lng'] = $dropoffLng;
+        $fallback['geocode_status'] = 'ok';
+        return $fallback;
     }
 
     $pricing = mx_pricing_settings();
@@ -784,6 +832,11 @@ function mx_calculate_price(array $payload): array
         ['lat' => $dropoffLat, 'lng' => $dropoffLng]
     );
     if (($route['distance_type'] ?? '') !== 'route' || empty($route['route_distance_km'])) {
+        $route['pickup_lat'] = $pickupLat;
+        $route['pickup_lng'] = $pickupLng;
+        $route['dropoff_lat'] = $dropoffLat;
+        $route['dropoff_lng'] = $dropoffLng;
+        $route['geocode_status'] = 'ok';
         return $route;
     }
 
@@ -804,6 +857,7 @@ function mx_calculate_price(array $payload): array
         'route_duration_min' => $route['route_duration_min'],
         'route_provider' => $route['route_provider'],
         'route_status' => $route['route_status'],
+        'geocode_status' => 'ok',
         'pickup_lat' => $pickupLat,
         'pickup_lng' => $pickupLng,
         'dropoff_lat' => $dropoffLat,

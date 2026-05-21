@@ -185,16 +185,20 @@ const routeEstimatePayload = (form) => {
   const dropoffInput = form?.elements.dropoff;
   const pickup = selectedLocationForInput(pickupInput);
   const dropoff = selectedLocationForInput(dropoffInput);
-  if (!pickup || !dropoff) return null;
+  const pickupAddress = pickupInput?.value?.trim() || '';
+  const dropoffAddress = dropoffInput?.value?.trim() || '';
+  if (!pickupAddress || !dropoffAddress) return null;
   return {
-    pickup: pickupInput.value.trim(),
-    dropoff: dropoffInput.value.trim(),
+    pickup: pickupAddress,
+    dropoff: dropoffAddress,
     pickupStreet: form.elements.pickupStreet?.value?.trim() || '',
     dropoffStreet: form.elements.dropoffStreet?.value?.trim() || '',
-    pickupLat: pickup.lat,
-    pickupLng: pickup.lng,
-    dropoffLat: dropoff.lat,
-    dropoffLng: dropoff.lng,
+    pickupLat: pickup?.lat || '',
+    pickupLng: pickup?.lng || '',
+    dropoffLat: dropoff?.lat || '',
+    dropoffLng: dropoff?.lng || '',
+    pickupAddressSource: pickup?.source || 'manual',
+    dropoffAddressSource: dropoff?.source || 'manual',
     service: form.elements.service?.value || 'normal',
     packageType: form.elements.packageType?.value || 'evrak',
   };
@@ -203,12 +207,40 @@ const routeEstimatePayload = (form) => {
 const fetchRouteEstimate = async (form) => {
   const payload = routeEstimatePayload(form);
   if (!payload) return null;
+  console.debug('[MyExpress fiyat] rota istegi', {
+    pickup: payload.pickup,
+    pickupLat: payload.pickupLat,
+    pickupLng: payload.pickupLng,
+    pickupSource: payload.pickupAddressSource,
+    dropoff: payload.dropoff,
+    dropoffLat: payload.dropoffLat,
+    dropoffLng: payload.dropoffLng,
+    dropoffSource: payload.dropoffAddressSource,
+  });
   const response = await fetch('api/price-estimate.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(payload),
   });
-  return response.ok ? response.json() : null;
+  if (!response.ok) {
+    console.debug('[MyExpress fiyat] endpoint hatasi', { status: response.status });
+    return null;
+  }
+  const data = await response.json().catch((error) => {
+    console.debug('[MyExpress fiyat] gecersiz endpoint cevabi', { error: error?.message || String(error) });
+    return null;
+  });
+  if (!data) return null;
+  console.debug('[MyExpress fiyat] rota cevabi', {
+    ok: data?.ok,
+    geocodeStatus: data?.price?.geocode_status,
+    routingStatus: data?.price?.route_status,
+    distanceType: data?.price?.distance_type,
+    routeDistance: data?.price?.route_distance_km,
+    price: data?.price?.price,
+    fallbackReason: data?.price?.fallback_reason || data?.price?.route_status,
+  });
+  return data;
 };
 
 const loadPricingConfig = async () => {
@@ -293,10 +325,10 @@ const updateScheduleFields = () => {
 const updatePriceEstimate = () => {
   if (!deliveryForm || !priceEstimate) return;
 
-  const pickup = selectedLocationForInput(deliveryForm.elements.pickup);
-  const dropoff = selectedLocationForInput(deliveryForm.elements.dropoff);
+  const pickupAddress = deliveryForm.elements.pickup?.value?.trim() || '';
+  const dropoffAddress = deliveryForm.elements.dropoff?.value?.trim() || '';
 
-  if (!pickup || !dropoff) {
+  if (!pickupAddress || !dropoffAddress) {
     priceEstimate.querySelector('strong').textContent = manualPriceText;
     return;
   }
@@ -304,7 +336,10 @@ const updatePriceEstimate = () => {
   priceEstimate.querySelector('strong').textContent = 'Rota mesafesi kontrol ediliyor...';
   window.clearTimeout(estimateTimers.get(deliveryForm));
   estimateTimers.set(deliveryForm, window.setTimeout(async () => {
-    const data = await fetchRouteEstimate(deliveryForm).catch(() => null);
+    const data = await fetchRouteEstimate(deliveryForm).catch((error) => {
+      console.debug('[MyExpress fiyat] rota istegi basarisiz', { error: error?.message || String(error) });
+      return null;
+    });
     const result = data?.ok && data.price?.distance_type === 'route' ? data.price : null;
     priceEstimate.querySelector('strong').textContent = result?.price || manualPriceText;
   }, 320));
@@ -313,11 +348,11 @@ const updatePriceEstimate = () => {
 const updateDetailEstimate = () => {
   if (!detailForm || !detailPriceEstimate) return;
 
-  const pickup = selectedLocationForInput(detailForm.elements.pickup);
-  const dropoff = selectedLocationForInput(detailForm.elements.dropoff);
+  const pickupAddress = detailForm.elements.pickup?.value?.trim() || '';
+  const dropoffAddress = detailForm.elements.dropoff?.value?.trim() || '';
   const target = detailPriceEstimate.querySelector('strong');
 
-  if (!pickup || !dropoff) {
+  if (!pickupAddress || !dropoffAddress) {
     detailPriceEstimate.hidden = false;
     target.textContent = manualPriceText;
     if (requestSummary?.querySelector('[data-summary-price]')) {
@@ -333,7 +368,10 @@ const updateDetailEstimate = () => {
   }
   window.clearTimeout(estimateTimers.get(detailForm));
   estimateTimers.set(detailForm, window.setTimeout(async () => {
-    const data = await fetchRouteEstimate(detailForm).catch(() => null);
+    const data = await fetchRouteEstimate(detailForm).catch((error) => {
+      console.debug('[MyExpress fiyat] detay rota istegi basarisiz', { error: error?.message || String(error) });
+      return null;
+    });
     const result = data?.ok && data.price?.distance_type === 'route' ? data.price : null;
     const text = result?.price || manualPriceText;
     target.textContent = text;
@@ -523,6 +561,7 @@ const renderAutocomplete = async (input) => {
 
   if (input.dataset.selectedLabel && rawQuery === input.dataset.selectedLabel) {
     updatePriceEstimate();
+    updateDetailEstimate();
     return;
   }
 
@@ -530,7 +569,11 @@ const renderAutocomplete = async (input) => {
   input.removeAttribute('data-selected-lat');
   input.removeAttribute('data-selected-lng');
   input.removeAttribute('data-selected-type');
+  input.removeAttribute('data-selected-district');
+  input.removeAttribute('data-selected-neighborhood');
+  input.removeAttribute('data-selected-source');
   updatePriceEstimate();
+  updateDetailEstimate();
 
   if (query.length < 2) {
     closeAutocomplete(input);
