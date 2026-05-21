@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/Logo.png">
-    <link rel="stylesheet" href="styles.css?v=20260521-request-compact">
+    <link rel="stylesheet" href="styles.css?v=20260521-request-flow-polish">
   </head>
   <body class="request-page">
     <header class="site-header" data-header>
@@ -69,6 +69,32 @@
             <a href="hesabim/kayit.php" class="btn btn-primary btn-small">Üye Ol</a>
           </div>
           <form class="delivery-form detail-form request-form-card" data-detail-form>
+            <div class="form-section compact-section shipment-section shipment-preferences">
+              <h3>Gönderi tercihi</h3>
+              <div class="option-grid">
+                <div class="choice-group">
+                  <span>Hizmet tipi</span>
+                  <div class="choice-options compact-options" data-choice-group>
+                    <label><input type="radio" name="service" value="normal" checked><span>Motorlu</span></label>
+                    <label><input type="radio" name="service" value="express"><span>Express</span></label>
+                    <label><input type="radio" name="service" value="vip"><span>VIP</span></label>
+                    <label><input type="radio" name="service" value="aracli"><span>Arabalı</span></label>
+                    <label><input type="radio" name="service" value="eticaret"><span>E-Ticaret</span></label>
+                  </div>
+                </div>
+                <div class="choice-group">
+                  <span>Paket tipi</span>
+                  <div class="choice-options compact-options" data-choice-group>
+                    <label><input type="radio" name="packageType" value="evrak" checked><span>Evrak</span></label>
+                    <label><input type="radio" name="packageType" value="kucuk"><span>Küçük</span></label>
+                    <label><input type="radio" name="packageType" value="orta"><span>Orta</span></label>
+                    <label><input type="radio" name="packageType" value="buyuk"><span>Büyük</span></label>
+                    <label><input type="radio" name="packageType" value="motorDisi"><span>Motor çantasına sığmayan</span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="route-contact-grid">
               <section class="route-card">
                 <div class="route-card-head">
@@ -144,38 +170,15 @@
                     <input type="email" name="recipientEmail" placeholder="İsteğe bağlı">
                   </label>
                   <label>
-                    Alıcı T.C. kimlik no <small class="optional-label">İsteğe bağlı</small>
+                    <span class="label-row">Alıcı T.C. kimlik no <small class="optional-label">İsteğe bağlı</small></span>
                     <input type="text" name="recipientTckn" placeholder="Varsa 11 haneli T.C. kimlik no" inputmode="numeric" maxlength="11" data-tckn>
                   </label>
                 </div>
               </section>
             </div>
 
-            <div class="form-section compact-section shipment-section">
-              <h3>Hizmet ve paket</h3>
-              <div class="option-grid">
-                <div class="choice-group">
-                  <span>Hizmet tipi</span>
-                  <div class="choice-options compact-options" data-choice-group>
-                    <label><input type="radio" name="service" value="normal" checked><span>Motorlu</span></label>
-                    <label><input type="radio" name="service" value="express"><span>Express</span></label>
-                    <label><input type="radio" name="service" value="vip"><span>VIP</span></label>
-                    <label><input type="radio" name="service" value="aracli"><span>Arabalı</span></label>
-                    <label><input type="radio" name="service" value="eticaret"><span>E-Ticaret</span></label>
-                  </div>
-                </div>
-                <div class="choice-group">
-                  <span>Paket tipi</span>
-                  <div class="choice-options compact-options" data-choice-group>
-                    <label><input type="radio" name="packageType" value="evrak" checked><span>Evrak</span></label>
-                    <label><input type="radio" name="packageType" value="kucuk"><span>Küçük</span></label>
-                    <label><input type="radio" name="packageType" value="orta"><span>Orta</span></label>
-                    <label><input type="radio" name="packageType" value="buyuk"><span>Büyük</span></label>
-                    <label><input type="radio" name="packageType" value="motorDisi"><span>Motor çantasına sığmayan</span></label>
-                  </div>
-                </div>
-              </div>
-              <div class="form-grid">
+            <div class="form-section schedule-note-section">
+              <div class="form-grid schedule-note-grid">
                 <label>
                   Teslim zamanı
                   <select name="deliveryTime">
@@ -242,6 +245,6 @@
       <div class="footer-links"><strong>Bilgilendirme</strong><a href="takip.html">Gönderi Durumu Takibi</a><a href="gizlilik-politikasi.html">Gizlilik Politikası</a><a href="kvkk-politikasi.html">KVKK Aydınlatma Metni</a><a href="teslimat-sartlari.html">Teslimat Şartları</a><a href="yasakli-gonderiler.html">Yasaklı Gönderiler</a><a href="sss.html">Sıkça Sorulan Sorular</a></div>
       <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="script.js?v=20260521-request-compact"></script>
+    <script src="script.js?v=20260521-request-flow-polish"></script>
   </body>
 </html>

@@ -578,6 +578,12 @@ h3 {
   border-radius: 8px;
 }
 
+.route-card textarea {
+  height: 76px;
+  min-height: 76px;
+  resize: vertical;
+}
+
 .route-card-head {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
@@ -617,8 +623,72 @@ h3 {
   gap: 10px;
 }
 
+.route-identity-grid label {
+  grid-template-rows: 40px auto;
+  align-content: end;
+}
+
+.route-identity-grid input {
+  align-self: end;
+}
+
+.label-row {
+  display: block;
+  line-height: 1.15;
+}
+
+.optional-label {
+  display: block;
+  margin-top: 3px;
+  color: #7e8b97;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .shipment-section {
   background: #eef4f6;
+}
+
+.shipment-preferences {
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f7fafb;
+}
+
+.shipment-preferences .option-grid {
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.shipment-preferences .choice-group {
+  gap: 7px;
+}
+
+.shipment-preferences .choice-options {
+  gap: 6px;
+}
+
+.shipment-preferences .compact-options span {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.schedule-note-section {
+  padding: 0;
+}
+
+.schedule-note-grid {
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.schedule-note-section .schedule-grid {
+  max-width: 420px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
 }
 
 .consent-box {
