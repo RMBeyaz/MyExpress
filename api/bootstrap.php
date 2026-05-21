@@ -331,7 +331,7 @@ function mx_statuses(): array
 {
     return [
         'new' => 'Yeni',
-        'called' => 'Arandı',
+        'called' => 'İşleme Alındı',
         'assigned' => 'Kurye Atandı',
         'picked_up' => 'Teslim Alındı',
         'delivered' => 'Teslim Edildi',

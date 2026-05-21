@@ -151,7 +151,7 @@ if (mx_table_exists('customers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Müşteriler | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-customers">
+    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -222,14 +222,15 @@ if (mx_table_exists('customers')) {
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" value="<?= (int) $customer['id'] ?>">
                         <input type="hidden" name="password" value="">
-                        <button class="panel-icon-btn save" type="submit" aria-label="Müşteriyi kaydet"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 3h12l2 2v16H5V3Zm2 2v14h10V7.8L14.2 5H7Zm2 1h5v5H9V6Zm0 8h6v2H9v-2Z"/></svg></button>
+                        <button class="panel-icon-btn save" type="submit" aria-label="Müşteriyi kaydet" title="Müşteriyi kaydet"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 3h12l2 2v16H5V3Zm2 2v14h10V7.8L14.2 5H7Zm2 1h5v5H9V6Zm0 8h6v2H9v-2Z"/></svg></button>
                       </form>
-                      <a class="panel-icon-btn" href="musteri-hareketleri.php?id=<?= (int) $customer['id'] ?>" aria-label="Müşteri talepleri"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5h16v4H4V5Zm0 6h16v8H4v-8Zm2 2v4h12v-4H6Z"/></svg></a>
-                      <a class="panel-icon-btn" href="musteri-faturalari.php?id=<?= (int) $customer['id'] ?>" aria-label="Müşteri faturaları"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 2h9l3 3v17H6V2Zm2 2v16h8V7h-3V4H8Zm1 6h6v2H9v-2Zm0 4h6v2H9v-2Z"/></svg></a>
+                      <a class="panel-icon-btn" href="musteri-hareketleri.php?id=<?= (int) $customer['id'] ?>" aria-label="Müşteri talepleri" title="Müşteri talepleri"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5h16v4H4V5Zm0 6h16v8H4v-8Zm2 2v4h12v-4H6Z"/></svg></a>
+                      <a class="panel-icon-btn" href="musteri-adresleri.php?id=<?= (int) $customer['id'] ?>" aria-label="Müşteri adresleri" title="Müşteri adresleri"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg></a>
+                      <a class="panel-icon-btn" href="musteri-faturalari.php?id=<?= (int) $customer['id'] ?>" aria-label="Müşteri faturaları" title="Müşteri faturaları"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 2h9l3 3v17H6V2Zm2 2v16h8V7h-3V4H8Zm1 6h6v2H9v-2Zm0 4h6v2H9v-2Z"/></svg></a>
                       <form method="post" onsubmit="return confirm('Bu müşteri silinsin mi? Kayıtlı adres ve faturaları da silinir.');">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= (int) $customer['id'] ?>">
-                        <button class="panel-icon-btn danger" type="submit" aria-label="Müşteriyi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>
+                        <button class="panel-icon-btn danger" type="submit" aria-label="Müşteriyi sil" title="Müşteriyi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>
                       </form>
                     </div>
                   </td>

@@ -46,7 +46,7 @@ $statuses = mx_statuses();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($customer['full_name']) ?> | Müşteri Talepleri</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-customers">
+    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
   </head>
   <body class="panel-body">
     <main class="panel-shell">

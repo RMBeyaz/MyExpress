@@ -288,7 +288,7 @@ if (mx_panel_is_logged_in()) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-customers">
+    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -299,7 +299,6 @@ if (mx_panel_is_logged_in()) {
         </div>
         <?php if (mx_panel_is_logged_in()): ?>
         <div class="panel-header-actions">
-          <a class="btn btn-secondary" href="talep-ekle.php">Manuel Talep</a>
           <?php if (mx_panel_can_manage_users()): ?>
             <a class="btn btn-secondary" href="musteriler.php">Müşteriler</a>
           <?php endif; ?>
@@ -364,11 +363,16 @@ if (mx_panel_is_logged_in()) {
           <?php if ($panelError !== ''): ?>
             <p class="panel-alert"><?= mx_h($panelError) ?></p>
           <?php endif; ?>
-          <div class="status-filter-bar" aria-label="Duruma göre filtrele">
-            <a class="status-filter status-filter-all <?= $filters['status'] === '' ? 'is-active' : '' ?>" href="<?= mx_h($statusUrl('')) ?>">Hepsi</a>
-            <?php foreach ($statuses as $key => $label): ?>
-              <a class="status-filter panel-status-<?= mx_h($key) ?> <?= $filters['status'] === $key ? 'is-active' : '' ?>" href="<?= mx_h($statusUrl($key)) ?>"><?= mx_h($label) ?></a>
-            <?php endforeach; ?>
+          <div class="status-filter-row">
+            <div class="status-filter-bar" aria-label="Duruma göre filtrele">
+              <a class="status-filter status-filter-all <?= $filters['status'] === '' ? 'is-active' : '' ?>" href="<?= mx_h($statusUrl('')) ?>">Hepsi</a>
+              <?php foreach ($statuses as $key => $label): ?>
+                <a class="status-filter panel-status-<?= mx_h($key) ?> <?= $filters['status'] === $key ? 'is-active' : '' ?>" href="<?= mx_h($statusUrl($key)) ?>"><?= mx_h($label) ?></a>
+              <?php endforeach; ?>
+            </div>
+            <a class="panel-icon-btn panel-row-action" href="talep-ekle.php" aria-label="Manuel talep ekle" title="Manuel talep ekle">
+              <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>
+            </a>
           </div>
           <div class="panel-table-wrap">
             <table class="panel-table request-table">
@@ -416,10 +420,10 @@ if (mx_panel_is_logged_in()) {
                         <a class="panel-icon-btn courier-dispatch-btn" href="<?= mx_h(mx_whatsapp_url((string) $request['courier_phone'], $dispatchMessage)) ?>" target="_blank" rel="noopener" title="<?= mx_h($request['courier_name']) ?> kuryesine ilet" aria-label="Kuryeye WhatsApp ile ilet">🏍</a>
                         <small><?= mx_h($request['courier_name']) ?></small>
                       <?php else: ?>
-                        <button class="panel-icon-btn courier-dispatch-btn is-disabled" type="button" data-courier-missing aria-label="Kurye atanmamış">🏍</button>
+                        <button class="panel-icon-btn courier-dispatch-btn is-disabled" type="button" data-courier-missing aria-label="Kurye atanmamış" title="Kurye atanmamış">🏍</button>
                       <?php endif; ?>
                     </td>
-                    <td><button class="panel-icon-btn danger trash-action" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>" aria-label="Talebi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button></td>
+                    <td><button class="panel-icon-btn danger trash-action" type="button" data-delete-open data-id="<?= (int) $request['id'] ?>" data-code="<?= mx_h($request['tracking_code']) ?>" aria-label="Talebi sil" title="Talebi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button></td>
                   </tr>
                 <?php endforeach; ?>
                 <?php if (!$requests): ?>

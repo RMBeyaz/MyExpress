@@ -179,7 +179,7 @@ if (mx_table_exists('customers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Manuel Talep | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-customers">
+    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
   </head>
   <body class="panel-body request-detail-page">
     <main class="panel-shell">
