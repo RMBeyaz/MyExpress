@@ -398,21 +398,27 @@ h3 {
 
 .delivery-form {
   display: grid;
-  gap: 14px;
+  gap: 18px;
+}
+
+.delivery-form [hidden] {
+  display: none !important;
 }
 
 .delivery-form label {
   display: grid;
-  gap: 7px;
-  color: var(--navy);
-  font-size: 14px;
-  font-weight: 800;
+  gap: 8px;
+  color: #314253;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .field-help {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
+  margin-top: 2px;
+  color: #7a8793;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1.35;
 }
 
@@ -420,23 +426,45 @@ h3 {
 .delivery-form select,
 .delivery-form textarea {
   width: 100%;
-  min-height: 44px;
-  padding: 10px 13px;
+  min-height: 48px;
+  padding: 12px 14px;
   color: var(--text);
   background: #fff;
-  border: 1px solid rgba(11, 34, 54, 0.18);
-  border-radius: 8px;
+  border: 1px solid rgba(11, 34, 54, 0.14);
+  border-radius: 10px;
   outline: none;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 650;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.delivery-form select {
+  appearance: none;
+  padding-right: 42px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #647382 50%),
+    linear-gradient(135deg, #647382 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) 52%,
+    calc(100% - 13px) 52%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.delivery-form input::placeholder,
+.delivery-form textarea::placeholder {
+  color: #9aa5af;
+  font-weight: 600;
 }
 
 .delivery-form textarea {
-  min-height: 76px;
+  min-height: 94px;
   resize: vertical;
+  line-height: 1.5;
 }
 
 .detail-layout-compact textarea {
-  min-height: 72px;
+  min-height: 94px;
 }
 
 .autocomplete-field {
@@ -530,12 +558,12 @@ h3 {
 }
 
 .schedule-grid {
-  max-width: 320px;
-  margin-top: 0;
-  padding: 10px;
-  background: #eef4f6;
-  border: 1px solid rgba(11, 34, 54, 0.12);
-  border-radius: 8px;
+  max-width: 560px;
+  margin-top: 12px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .form-section {
@@ -549,82 +577,68 @@ h3 {
 }
 
 .compact-section {
-  padding: 14px;
-  background: #f8fafb;
-  border: 1px solid rgba(11, 34, 54, 0.14);
-  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .request-form-card {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(11, 34, 54, 0.15);
-  border-radius: 10px;
-  box-shadow: 0 18px 52px rgba(11, 34, 54, 0.09);
+  padding: clamp(18px, 2.2vw, 30px);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(11, 34, 54, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(11, 34, 54, 0.08);
 }
 
 .route-contact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
 }
 
 .route-card {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  background: #f7fafb;
-  border: 1px solid rgba(11, 34, 54, 0.14);
-  border-radius: 8px;
+  gap: 16px;
+  padding: clamp(16px, 1.6vw, 22px);
+  background: #fbfcfd;
+  border: 1px solid rgba(11, 34, 54, 0.1);
+  border-radius: 14px;
 }
 
 .route-card textarea {
-  height: 76px;
-  min-height: 76px;
+  height: 98px;
+  min-height: 98px;
   resize: vertical;
 }
 
 .route-card-head {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-}
-
-.route-card-head > span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: #fff;
-  background: var(--navy);
-  border-radius: 8px;
-  font-weight: 900;
+  display: block;
+  padding-bottom: 2px;
 }
 
 .route-card-head h3,
 .shipment-section h3 {
   margin: 0;
   color: var(--navy);
-  font-size: 18px;
-  line-height: 1.1;
+  font-size: 17px;
+  line-height: 1.2;
 }
 
 .route-card-head p {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .route-identity-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 14px;
 }
 
 .route-identity-grid label {
-  grid-template-rows: 40px auto;
+  grid-template-rows: auto auto;
   align-content: end;
 }
 
@@ -638,21 +652,21 @@ h3 {
 }
 
 .optional-label {
-  display: block;
-  margin-top: 3px;
-  color: #7e8b97;
+  display: inline;
+  margin-left: 6px;
+  color: #8a96a1;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .shipment-section {
-  background: #eef4f6;
+  background: transparent;
 }
 
 .shipment-preferences {
-  gap: 10px;
-  padding: 12px 14px;
-  background: #f7fafb;
+  gap: 12px;
+  padding: 2px 0 4px;
+  background: transparent;
 }
 
 .shipment-preferences .option-grid {
@@ -662,33 +676,36 @@ h3 {
 }
 
 .shipment-preferences .choice-group {
-  gap: 7px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .shipment-preferences .choice-options {
-  gap: 6px;
+  gap: 7px;
 }
 
 .shipment-preferences .compact-options span {
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 13px;
   font-size: 12px;
 }
 
 .schedule-note-section {
-  padding: 0;
+  padding: 16px 0 0;
+  border-top: 1px solid rgba(11, 34, 54, 0.08);
 }
 
 .schedule-note-grid {
-  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
-  gap: 12px;
-  align-items: end;
+  grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.25fr);
+  gap: 16px;
+  align-items: start;
 }
 
 .schedule-note-section .schedule-grid {
-  max-width: 420px;
+  max-width: 520px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 10px;
+  margin-top: 12px;
+  gap: 12px;
 }
 
 .consent-box {
@@ -731,9 +748,9 @@ h3 {
 .choice-group {
   display: grid;
   gap: 10px;
-  color: var(--navy);
-  font-size: 14px;
-  font-weight: 800;
+  color: #556372;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .option-grid {
@@ -746,6 +763,8 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .choice-options label {
@@ -754,6 +773,8 @@ h3 {
 
 .choice-options input {
   position: absolute;
+  width: auto;
+  min-height: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -762,21 +783,28 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 12px;
+  min-height: 38px;
+  padding: 0 13px;
   color: var(--navy);
   background: #fbfcfd;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid rgba(11, 34, 54, 0.12);
+  border-radius: 999px;
   cursor: pointer;
-  font-weight: 800;
-  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  font-weight: 750;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
 .choice-options input:checked + span {
-  color: #fff;
-  background: var(--navy);
-  border-color: var(--navy);
+  color: var(--navy);
+  background: rgba(239, 68, 56, 0.1);
+  border-color: rgba(239, 68, 56, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 56, 0.12);
+}
+
+.choice-options label:hover span,
+.choice-options input:focus-visible + span {
+  border-color: rgba(239, 68, 56, 0.32);
+  box-shadow: 0 0 0 3px rgba(239, 68, 56, 0.08);
 }
 
 .compact-options span {
@@ -2310,6 +2338,10 @@ h3 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.delivery-form .route-identity-grid {
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+}
+
 .detail-content h2 {
   margin-top: 34px;
   margin-bottom: 14px;
@@ -2579,6 +2611,14 @@ h3 {
   .hero-content {
     max-width: 100%;
   }
+
+  .route-contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-form .route-identity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -2654,10 +2694,42 @@ h3 {
   .request-form-card,
   .route-card,
   .compact-section {
-    padding: 12px;
+    padding: 14px;
+  }
+
+  .request-form-card {
+    border-radius: 12px;
+  }
+
+  .shipment-preferences {
+    padding: 0;
+  }
+
+  .shipment-preferences .option-grid {
+    gap: 14px;
+  }
+
+  .choice-options {
+    flex-wrap: wrap;
+    margin-inline: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .choice-options span {
+    white-space: nowrap;
+  }
+
+  .schedule-note-grid,
+  .schedule-note-section .schedule-grid {
+    grid-template-columns: 1fr;
   }
 
   .route-identity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-form .route-identity-grid {
     grid-template-columns: 1fr;
   }
 

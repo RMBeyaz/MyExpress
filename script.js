@@ -264,8 +264,9 @@ const updateScheduleFields = () => {
   if (!detailForm || !scheduleFields) return;
 
   const value = detailForm.elements.deliveryTime?.value || '';
-  const requiresTime = value === 'Belirli saat' || value === 'Belirli saat aralığı';
-  const requiresDate = value === 'İleri tarihli teslimat';
+  const normalizedValue = value.toLocaleLowerCase('tr-TR');
+  const requiresTime = normalizedValue.includes('saat');
+  const requiresDate = normalizedValue.includes('ileri tarih') || normalizedValue.includes('tarihli');
   const hasScheduleChoice = requiresTime || requiresDate;
   const dateInput = detailForm.elements.deliveryDate;
   const startInput = detailForm.elements.deliveryStartTime;
