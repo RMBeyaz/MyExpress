@@ -569,15 +569,151 @@ function mx_round_price(float $value, float $roundTo): float
     return round($value / $roundTo) * $roundTo;
 }
 
+function mx_route_unavailable(string $status = 'manual_required', ?string $provider = null): array
+{
+    return [
+        'price' => 'Operasyon teyidi gerekli',
+        'distance_km' => null,
+        'distance_type' => $status,
+        'route_distance_km' => null,
+        'route_duration_min' => null,
+        'route_provider' => $provider,
+        'route_status' => $status,
+    ];
+}
+
+function mx_geocode_istanbul_address(string $query): ?array
+{
+    $query = mx_clean_string($query, 500);
+    if ($query === '') {
+        return null;
+    }
+
+    $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
+        'format' => 'jsonv2',
+        'limit' => '1',
+        'countrycodes' => 'tr',
+        'accept-language' => 'tr',
+        'viewbox' => '28.01,41.65,29.95,40.72',
+        'bounded' => '1',
+        'q' => $query . ', İstanbul',
+    ]);
+
+    try {
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 4,
+                'header' => 'User-Agent: MyExpressKurye/1.0 (info@myexpress.com.tr)' . "\r\n",
+            ],
+        ]);
+        $raw = @file_get_contents($url, false, $context);
+        $data = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($data) || empty($data[0]['lat']) || empty($data[0]['lon'])) {
+            return null;
+        }
+        return ['lat' => (float) $data[0]['lat'], 'lng' => (float) $data[0]['lon']];
+    } catch (Throwable $error) {
+        mx_log_error('geocode failed', $error, ['query' => $query]);
+        return null;
+    }
+}
+
+function mx_route_distance_openroute(array $from, array $to): array
+{
+    $config = mx_config();
+    $apiKey = trim((string) ($config['openroute_api_key'] ?? $config['ors_api_key'] ?? ''));
+    if ($apiKey === '') {
+        return mx_route_unavailable('manual_required', 'openrouteservice');
+    }
+
+    $payload = json_encode([
+        'coordinates' => [
+            [(float) $from['lng'], (float) $from['lat']],
+            [(float) $to['lng'], (float) $to['lat']],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $url = 'https://api.openrouteservice.org/v2/directions/driving-car';
+    try {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: ' . $apiKey,
+                    'Content-Type: application/json; charset=utf-8',
+                    'Accept: application/json',
+                ],
+            ]);
+            $raw = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+        } else {
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'timeout' => 8,
+                    'header' => "Authorization: {$apiKey}\r\nContent-Type: application/json; charset=utf-8\r\nAccept: application/json\r\n",
+                    'content' => $payload,
+                ],
+            ]);
+            $raw = @file_get_contents($url, false, $context);
+            $status = is_string($raw) ? 200 : 0;
+        }
+
+        $data = is_string($raw) ? json_decode($raw, true) : null;
+        $summary = $data['features'][0]['properties']['summary'] ?? null;
+        if ($status < 200 || $status >= 300 || !is_array($summary) || !isset($summary['distance'])) {
+            return mx_route_unavailable('route_failed', 'openrouteservice');
+        }
+
+        return [
+            'distance_type' => 'route',
+            'route_distance_km' => round(((float) $summary['distance']) / 1000, 2),
+            'route_duration_min' => isset($summary['duration']) ? round(((float) $summary['duration']) / 60, 2) : null,
+            'route_provider' => 'openrouteservice',
+            'route_status' => 'ok',
+        ];
+    } catch (Throwable $error) {
+        mx_log_error('openroute routing failed', $error);
+        return mx_route_unavailable('route_failed', 'openrouteservice');
+    }
+}
+
 function mx_calculate_price(array $payload): array
 {
+    $config = mx_config();
+    $hasRoutingKey = trim((string) ($config['openroute_api_key'] ?? $config['ors_api_key'] ?? '')) !== '';
+    if (!$hasRoutingKey) {
+        return mx_route_unavailable('manual_required', 'openrouteservice');
+    }
+
     $pickupLat = is_numeric($payload['pickupLat'] ?? null) ? (float) $payload['pickupLat'] : null;
     $pickupLng = is_numeric($payload['pickupLng'] ?? null) ? (float) $payload['pickupLng'] : null;
     $dropoffLat = is_numeric($payload['dropoffLat'] ?? null) ? (float) $payload['dropoffLat'] : null;
     $dropoffLng = is_numeric($payload['dropoffLng'] ?? null) ? (float) $payload['dropoffLng'] : null;
 
     if ($pickupLat === null || $pickupLng === null || $dropoffLat === null || $dropoffLng === null) {
-        return ['price' => mx_clean_string($payload['price'] ?? 'Hesaplanamadı', 40), 'distance_km' => null];
+        $pickupGeo = mx_geocode_istanbul_address(implode(', ', array_filter([
+            $payload['pickupStreet'] ?? '',
+            $payload['pickup'] ?? '',
+            'İstanbul',
+        ])));
+        $dropoffGeo = mx_geocode_istanbul_address(implode(', ', array_filter([
+            $payload['dropoffStreet'] ?? '',
+            $payload['dropoff'] ?? '',
+            'İstanbul',
+        ])));
+        if (!$pickupGeo || !$dropoffGeo) {
+            return mx_route_unavailable('manual_required', null);
+        }
+        $pickupLat = $pickupGeo['lat'];
+        $pickupLng = $pickupGeo['lng'];
+        $dropoffLat = $dropoffGeo['lat'];
+        $dropoffLng = $dropoffGeo['lng'];
     }
 
     $pricing = mx_pricing_settings();
@@ -587,10 +723,17 @@ function mx_calculate_price(array $payload): array
     $package = $pricing['packages'][$packageKey] ?? ['fee' => 0.0];
     $rules = $pricing['rules'];
 
-    $rawDistance = mx_distance_km($pickupLat, $pickupLng, $dropoffLat, $dropoffLng);
+    $route = mx_route_distance_openroute(
+        ['lat' => $pickupLat, 'lng' => $pickupLng],
+        ['lat' => $dropoffLat, 'lng' => $dropoffLng]
+    );
+    if (($route['distance_type'] ?? '') !== 'route' || empty($route['route_distance_km'])) {
+        return $route;
+    }
+
     $sameArea = mx_clean_string($payload['pickup'] ?? '', 255) === mx_clean_string($payload['dropoff'] ?? '', 255);
     $minimumKm = $sameArea ? (float) $rules['minSameAreaKm'] : (float) $rules['minDefaultKm'];
-    $billableDistance = max($rawDistance * (float) $rules['routeMultiplier'], $minimumKm);
+    $billableDistance = max((float) $route['route_distance_km'], $minimumKm);
     $bridgeFee = (($pickupLng < 29 && $dropoffLng >= 29) || ($pickupLng >= 29 && $dropoffLng < 29))
         ? (float) $rules['bridgeFee']
         : 0.0;
@@ -600,6 +743,15 @@ function mx_calculate_price(array $payload): array
     return [
         'price' => number_format(mx_round_price($price, (float) $rules['roundTo']), 0, ',', '.') . ' TL',
         'distance_km' => round($billableDistance, 2),
+        'distance_type' => 'route',
+        'route_distance_km' => round((float) $route['route_distance_km'], 2),
+        'route_duration_min' => $route['route_duration_min'],
+        'route_provider' => $route['route_provider'],
+        'route_status' => $route['route_status'],
+        'pickup_lat' => $pickupLat,
+        'pickup_lng' => $pickupLng,
+        'dropoff_lat' => $dropoffLat,
+        'dropoff_lng' => $dropoffLng,
     ];
 }
 

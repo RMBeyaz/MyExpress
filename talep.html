@@ -55,7 +55,7 @@
           <p class="eyebrow">Talep detayları</p>
           <h1>Gönderi detaylarını tamamlayın</h1>
         </div>
-        <p>Alım ve teslim adreslerinizi listeden seçip açık adres tarifini ekleyerek talebinizi oluşturabilirsiniz.</p>
+        <p>Alım ve teslim ana adresini yazıp açık adres tarifini ekleyerek talebinizi oluşturabilirsiniz. Rota mesafesi doğrulanırsa fiyat otomatik hesaplanır.</p>
       </section>
 
       <section class="detail-layout detail-layout-compact request-detail-layout">
@@ -105,16 +105,16 @@
                   </div>
                 </div>
                 <label>
-                  Alım bölgesi / mahallesi
+                  Gönderici Ana Adres
                   <div class="autocomplete-field">
-                    <input type="text" name="pickup" placeholder="Örn. Etiler Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
+                    <input type="text" name="pickup" placeholder="İlçe, mahalle veya cadde yazın" autocomplete="off" data-address-input data-address-scope="neighborhood">
                     <div class="autocomplete-list" data-autocomplete-list></div>
                   </div>
-                  <small class="field-help">Listeden mahalle veya semt seçin.</small>
+                  <small class="field-help">Listeden seçebilir veya adresi manuel yazabilirsiniz.</small>
                 </label>
                 <label>
-                  Alım açık adres / tarif
-                  <textarea name="pickupStreet" placeholder="Cadde, sokak, bina no, kat, daire, firma adı, güvenlik veya zil bilgisi" required></textarea>
+                  Gönderici Açık Adres / Adres Tarifi
+                  <textarea name="pickupStreet" placeholder="Örn: No:12 Kat:3 Muhasebe, güvenlikten arayın." required></textarea>
                 </label>
                 <div class="form-grid identity-grid route-identity-grid">
                   <label>
@@ -145,16 +145,16 @@
                   </div>
                 </div>
                 <label>
-                  Teslim bölgesi / mahallesi
+                  Alıcı Ana Adres
                   <div class="autocomplete-field">
-                    <input type="text" name="dropoff" placeholder="Örn. Koşuyolu Mahallesi" autocomplete="off" data-address-input data-address-scope="neighborhood">
+                    <input type="text" name="dropoff" placeholder="İlçe, mahalle veya cadde yazın" autocomplete="off" data-address-input data-address-scope="neighborhood">
                     <div class="autocomplete-list" data-autocomplete-list></div>
                   </div>
-                  <small class="field-help">Listeden teslim mahallesi veya semti seçin.</small>
+                  <small class="field-help">Listeden seçebilir veya adresi manuel yazabilirsiniz.</small>
                 </label>
                 <label>
-                  Teslim açık adres / tarif
-                  <textarea name="dropoffStreet" placeholder="Cadde, sokak, bina no, kat, daire, alıcı noktası veya teslim tarifi" required></textarea>
+                  Alıcı Açık Adres / Adres Tarifi
+                  <textarea name="dropoffStreet" placeholder="Örn: No:12 Kat:3 Muhasebe, güvenlikten arayın." required></textarea>
                 </label>
                 <div class="form-grid identity-grid route-identity-grid">
                   <label>
@@ -210,7 +210,7 @@
               <div class="fee-summary-main">
                 <span>Gönderi ücreti</span>
                 <strong data-summary-price>Mahalleleri seçince hesaplanır</strong>
-                <p>Mahalle, hizmet tipi ve paket tipine göre anlık hesaplanır.</p>
+                <p>Rota mesafesi doğrulanırsa otomatik hesaplanır; gerekirse operasyon ekibi teyit eder.</p>
               </div>
               <div class="fee-summary-route">
                 <span>Alım</span>
@@ -245,6 +245,7 @@
       <div class="footer-links"><strong>Bilgilendirme</strong><a href="takip.html">Gönderi Durumu Takibi</a><a href="gizlilik-politikasi.html">Gizlilik Politikası</a><a href="kvkk-politikasi.html">KVKK Aydınlatma Metni</a><a href="teslimat-sartlari.html">Teslimat Şartları</a><a href="yasakli-gonderiler.html">Yasaklı Gönderiler</a><a href="sss.html">Sıkça Sorulan Sorular</a></div>
       <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="script.js?v=20260521-request-flow-polish"></script>
+    <script src="assets/istanbul-addresses.js?v=20260521-route-distance-v2"></script>
+    <script src="script.js?v=20260521-route-distance-v2"></script>
   </body>
 </html>

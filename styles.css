@@ -2970,6 +2970,14 @@ h3 {
   background: #fbfcfd;
 }
 
+.panel-body .manual-price-note {
+  display: inline-flex;
+  align-items: center;
+  color: #7a4d16;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .panel-body .status-filter-row {
   display: flex;
   align-items: center;

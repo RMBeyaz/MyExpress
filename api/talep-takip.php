@@ -30,9 +30,11 @@ try {
         ], 422);
     }
 
+    $routeSelect = (mx_column_exists('courier_requests', 'distance_type') ? ', distance_type' : ', NULL AS distance_type')
+        . (mx_column_exists('courier_requests', 'route_status') ? ', route_status' : ', NULL AS route_status');
     $stmt = mx_pdo()->prepare(
         'SELECT id, tracking_code, status, pickup, dropoff, service_label, package_label,
-                delivery_time, price, distance_km, created_at, updated_at
+                delivery_time, price, distance_km, created_at, updated_at' . $routeSelect . '
          FROM courier_requests
          WHERE tracking_code = :tracking_code
          LIMIT 1'
@@ -100,6 +102,8 @@ try {
             'delivery_time' => (string) $request['delivery_time'],
             'price' => (string) $request['price'],
             'distance_km' => $request['distance_km'] !== null ? (string) $request['distance_km'] : '',
+            'distance_type' => (string) ($request['distance_type'] ?? ''),
+            'route_status' => (string) ($request['route_status'] ?? ''),
             'created_at' => (string) $request['created_at'],
             'updated_at' => (string) $request['updated_at'],
         ],

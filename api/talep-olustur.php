@@ -24,7 +24,6 @@ try {
         'recipientPhone' => 'Alici telefon',
         'service' => 'Hizmet tipi',
         'packageType' => 'Paket tipi',
-        'price' => 'Gonderi ucreti',
     ];
 
     foreach ($required as $key => $label) {
@@ -79,12 +78,23 @@ try {
     $addressColumns = [
         'pickup_city' => ['payload' => 'pickupCity', 'max' => 80],
         'pickup_district' => ['payload' => 'pickupDistrict', 'max' => 80],
+        'pickup_neighborhood' => ['payload' => 'pickupNeighborhood', 'max' => 120],
+        'pickup_address_source' => ['payload' => 'pickupAddressSource', 'max' => 40],
         'pickup_road' => ['payload' => 'pickupRoad', 'max' => 160],
         'pickup_building_no' => ['payload' => 'pickupBuildingNo', 'max' => 80],
         'dropoff_city' => ['payload' => 'dropoffCity', 'max' => 80],
         'dropoff_district' => ['payload' => 'dropoffDistrict', 'max' => 80],
+        'dropoff_neighborhood' => ['payload' => 'dropoffNeighborhood', 'max' => 120],
+        'dropoff_address_source' => ['payload' => 'dropoffAddressSource', 'max' => 40],
         'dropoff_road' => ['payload' => 'dropoffRoad', 'max' => 160],
         'dropoff_building_no' => ['payload' => 'dropoffBuildingNo', 'max' => 80],
+        'distance_type' => ['payload' => '_price_distance_type', 'max' => 40],
+        'route_provider' => ['payload' => '_price_route_provider', 'max' => 80],
+        'route_status' => ['payload' => '_price_route_status', 'max' => 80],
+    ];
+    $numericRouteColumns = [
+        'route_distance_km' => $priceResult['route_distance_km'] ?? null,
+        'route_duration_min' => $priceResult['route_duration_min'] ?? null,
     ];
     $availableAddressColumns = [];
     foreach ($addressColumns as $column => $meta) {
@@ -92,7 +102,6 @@ try {
             $availableAddressColumns[$column] = $meta;
         }
     }
-    $addressColumnsReady = count($availableAddressColumns) === count($addressColumns);
     $buildAddressText = static function (string $prefix) use ($payload): string {
         $labels = [
             'City' => 'Şehir',
@@ -131,8 +140,8 @@ try {
         }
         return $filtered[0] ?? '';
     };
-    $pickupStreet = $addressColumnsReady ? mx_clean_text($payload['pickupStreet'], 1000) : $buildAddressText('pickup');
-    $dropoffStreet = $addressColumnsReady ? mx_clean_text($payload['dropoffStreet'], 1000) : $buildAddressText('dropoff');
+    $pickupStreet = mx_clean_text($payload['pickupStreet'], 1000);
+    $dropoffStreet = mx_clean_text($payload['dropoffStreet'], 1000);
     $extraColumnsSql = '';
     $extraValuesSql = '';
     $extraParams = [];
@@ -148,9 +157,24 @@ try {
                     $value = $deriveDistrict((string) $payload['pickup']);
                 } elseif ($column === 'dropoff_district') {
                     $value = $deriveDistrict((string) $payload['dropoff']);
+                } elseif ($column === 'pickup_address_source' || $column === 'dropoff_address_source') {
+                    $value = 'manual';
+                } elseif ($column === 'distance_type') {
+                    $value = (string) ($priceResult['distance_type'] ?? 'manual_required');
+                } elseif ($column === 'route_provider') {
+                    $value = (string) ($priceResult['route_provider'] ?? '');
+                } elseif ($column === 'route_status') {
+                    $value = (string) ($priceResult['route_status'] ?? 'manual_required');
                 }
             }
             $extraParams[':' . $column] = mx_clean_string($value, (int) $meta['max']);
+        }
+    }
+    foreach ($numericRouteColumns as $column => $value) {
+        if (mx_column_exists('courier_requests', $column)) {
+            $extraColumnsSql .= ($extraColumnsSql === '' ? ', ' : ', ') . $column;
+            $extraValuesSql .= ($extraValuesSql === '' ? ', :' : ', :') . $column;
+            $extraParams[':' . $column] = is_numeric($value) ? (float) $value : null;
         }
     }
     $pdo->beginTransaction();
@@ -181,12 +205,12 @@ try {
         ':tracking_code' => $trackingCode,
         ':status' => 'new',
         ':pickup' => mx_clean_string($payload['pickup'], 255),
-        ':pickup_lat' => is_numeric($payload['pickupLat'] ?? null) ? (float) $payload['pickupLat'] : null,
-        ':pickup_lng' => is_numeric($payload['pickupLng'] ?? null) ? (float) $payload['pickupLng'] : null,
+        ':pickup_lat' => is_numeric($priceResult['pickup_lat'] ?? ($payload['pickupLat'] ?? null)) ? (float) ($priceResult['pickup_lat'] ?? $payload['pickupLat']) : null,
+        ':pickup_lng' => is_numeric($priceResult['pickup_lng'] ?? ($payload['pickupLng'] ?? null)) ? (float) ($priceResult['pickup_lng'] ?? $payload['pickupLng']) : null,
         ':pickup_street' => $pickupStreet,
         ':dropoff' => mx_clean_string($payload['dropoff'], 255),
-        ':dropoff_lat' => is_numeric($payload['dropoffLat'] ?? null) ? (float) $payload['dropoffLat'] : null,
-        ':dropoff_lng' => is_numeric($payload['dropoffLng'] ?? null) ? (float) $payload['dropoffLng'] : null,
+        ':dropoff_lat' => is_numeric($priceResult['dropoff_lat'] ?? ($payload['dropoffLat'] ?? null)) ? (float) ($priceResult['dropoff_lat'] ?? $payload['dropoffLat']) : null,
+        ':dropoff_lng' => is_numeric($priceResult['dropoff_lng'] ?? ($payload['dropoffLng'] ?? null)) ? (float) ($priceResult['dropoff_lng'] ?? $payload['dropoffLng']) : null,
         ':dropoff_street' => $dropoffStreet,
         ':service' => mx_clean_string($payload['service'], 40),
         ':service_label' => mx_clean_string($payload['serviceLabel'] ?? $payload['service'], 80),

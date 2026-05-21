@@ -54,6 +54,9 @@ $checks = [
         'courier_requests.dropoff_district' => false,
         'courier_requests.dropoff_road' => false,
         'courier_requests.dropoff_building_no' => false,
+        'courier_requests.distance_type' => false,
+        'courier_requests.route_distance_km' => false,
+        'courier_requests.route_status' => false,
         'customers.tckn' => false,
         'customer_addresses.contact_email' => false,
         'customer_addresses.contact_tckn' => false,
@@ -98,7 +101,7 @@ try {
     $checks['columns']['courier_requests.customer_id'] = mx_column_exists('courier_requests', 'customer_id');
     $checks['columns']['courier_requests.distance_km'] = mx_column_exists('courier_requests', 'distance_km');
     $checks['columns']['courier_requests.assigned_courier_id'] = mx_column_exists('courier_requests', 'assigned_courier_id');
-    foreach (['pickup_city', 'pickup_district', 'pickup_road', 'pickup_building_no', 'dropoff_city', 'dropoff_district', 'dropoff_road', 'dropoff_building_no'] as $column) {
+    foreach (['pickup_city', 'pickup_district', 'pickup_neighborhood', 'pickup_address_source', 'pickup_road', 'pickup_building_no', 'dropoff_city', 'dropoff_district', 'dropoff_neighborhood', 'dropoff_address_source', 'dropoff_road', 'dropoff_building_no', 'distance_type', 'route_distance_km', 'route_duration_min', 'route_provider', 'route_status'] as $column) {
         $checks['columns']['courier_requests.' . $column] = mx_column_exists('courier_requests', $column);
     }
     $checks['columns']['customers.tckn'] = mx_column_exists('customers', 'tckn');

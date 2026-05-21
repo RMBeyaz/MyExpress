@@ -180,6 +180,8 @@ if (mx_panel_is_logged_in()) {
     try {
         $pdo = mx_pdo();
         $hasDistance = mx_column_exists('courier_requests', 'distance_km');
+        $hasDistanceType = mx_column_exists('courier_requests', 'distance_type');
+        $hasRouteStatus = mx_column_exists('courier_requests', 'route_status');
         $hasCourierAssignment = mx_table_exists('couriers') && mx_column_exists('courier_requests', 'assigned_courier_id');
         $hasPickupDistrict = mx_column_exists('courier_requests', 'pickup_district');
         $hasDropoffDistrict = mx_column_exists('courier_requests', 'dropoff_district');
@@ -244,32 +246,44 @@ if (mx_panel_is_logged_in()) {
             $params[':recipient_phone_digits'] = '%' . $phoneDigits . '%';
         }
         if ($filters['pickup_address'] !== '') {
-            $where[] = '(pickup LIKE :pickup_address OR pickup_street LIKE :pickup_street)';
+            $pickupParts = ['pickup LIKE :pickup_address', 'pickup_street LIKE :pickup_street'];
+            if (mx_column_exists('courier_requests', 'pickup_district')) $pickupParts[] = 'pickup_district LIKE :pickup_district_filter';
+            if (mx_column_exists('courier_requests', 'pickup_neighborhood')) $pickupParts[] = 'pickup_neighborhood LIKE :pickup_neighborhood_filter';
+            $where[] = '(' . implode(' OR ', $pickupParts) . ')';
             $params[':pickup_address'] = '%' . $filters['pickup_address'] . '%';
             $params[':pickup_street'] = '%' . $filters['pickup_address'] . '%';
+            if (in_array('pickup_district LIKE :pickup_district_filter', $pickupParts, true)) $params[':pickup_district_filter'] = '%' . $filters['pickup_address'] . '%';
+            if (in_array('pickup_neighborhood LIKE :pickup_neighborhood_filter', $pickupParts, true)) $params[':pickup_neighborhood_filter'] = '%' . $filters['pickup_address'] . '%';
         }
         if ($filters['dropoff_address'] !== '') {
-            $where[] = '(dropoff LIKE :dropoff_address OR dropoff_street LIKE :dropoff_street)';
+            $dropoffParts = ['dropoff LIKE :dropoff_address', 'dropoff_street LIKE :dropoff_street'];
+            if (mx_column_exists('courier_requests', 'dropoff_district')) $dropoffParts[] = 'dropoff_district LIKE :dropoff_district_filter';
+            if (mx_column_exists('courier_requests', 'dropoff_neighborhood')) $dropoffParts[] = 'dropoff_neighborhood LIKE :dropoff_neighborhood_filter';
+            $where[] = '(' . implode(' OR ', $dropoffParts) . ')';
             $params[':dropoff_address'] = '%' . $filters['dropoff_address'] . '%';
             $params[':dropoff_street'] = '%' . $filters['dropoff_address'] . '%';
+            if (in_array('dropoff_district LIKE :dropoff_district_filter', $dropoffParts, true)) $params[':dropoff_district_filter'] = '%' . $filters['dropoff_address'] . '%';
+            if (in_array('dropoff_neighborhood LIKE :dropoff_neighborhood_filter', $dropoffParts, true)) $params[':dropoff_neighborhood_filter'] = '%' . $filters['dropoff_address'] . '%';
         }
 
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
         $distanceSelect = $hasDistance ? 'cr.distance_km,' : 'NULL AS distance_km,';
+        $routeMetaSelect = ($hasDistanceType ? ', cr.distance_type' : ', NULL AS distance_type')
+            . ($hasRouteStatus ? ', cr.route_status' : ', NULL AS route_status');
         $addressDetailSelect = ($hasPickupDistrict ? ', cr.pickup_district' : ', NULL AS pickup_district')
             . ($hasDropoffDistrict ? ', cr.dropoff_district' : ', NULL AS dropoff_district');
         $courierSelect = $hasCourierAssignment ? ', c.full_name AS courier_name, c.phone AS courier_phone' : ", NULL AS courier_name, NULL AS courier_phone";
         $courierJoin = $hasCourierAssignment ? ' LEFT JOIN couriers c ON c.id = cr.assigned_courier_id' : '';
         $qualifiedWhereSql = $whereSql !== '' ? str_replace(
-            ['status ', 'created_at ', 'tracking_code ', 'sender_name ', 'recipient_name ', 'sender_phone ', 'recipient_phone ', 'pickup ', 'pickup_street ', 'dropoff ', 'dropoff_street '],
-            ['cr.status ', 'cr.created_at ', 'cr.tracking_code ', 'cr.sender_name ', 'cr.recipient_name ', 'cr.sender_phone ', 'cr.recipient_phone ', 'cr.pickup ', 'cr.pickup_street ', 'cr.dropoff ', 'cr.dropoff_street '],
+            ['status ', 'created_at ', 'tracking_code ', 'sender_name ', 'recipient_name ', 'sender_phone ', 'recipient_phone ', 'pickup ', 'pickup_street ', 'pickup_district ', 'pickup_neighborhood ', 'dropoff ', 'dropoff_street ', 'dropoff_district ', 'dropoff_neighborhood '],
+            ['cr.status ', 'cr.created_at ', 'cr.tracking_code ', 'cr.sender_name ', 'cr.recipient_name ', 'cr.sender_phone ', 'cr.recipient_phone ', 'cr.pickup ', 'cr.pickup_street ', 'cr.pickup_district ', 'cr.pickup_neighborhood ', 'cr.dropoff ', 'cr.dropoff_street ', 'cr.dropoff_district ', 'cr.dropoff_neighborhood '],
             $whereSql
         ) : '';
         $qualifiedSort = in_array($sortKey, ['date', 'status', 'tracking', 'sender', 'recipient'], true) || $sort === 'created_at'
             ? 'cr.' . $sort
             : str_replace(['price', 'distance_km'], ['cr.price', 'cr.distance_km'], $sort);
         $sql = "SELECT cr.id, cr.tracking_code, cr.status, cr.pickup, cr.dropoff, cr.price, {$distanceSelect}
-                   cr.sender_name, cr.sender_phone, cr.recipient_name, cr.recipient_phone, cr.created_at{$addressDetailSelect}{$courierSelect}
+                   cr.sender_name, cr.sender_phone, cr.recipient_name, cr.recipient_phone, cr.created_at{$addressDetailSelect}{$routeMetaSelect}{$courierSelect}
                 FROM courier_requests cr{$courierJoin}{$qualifiedWhereSql}
                 ORDER BY {$qualifiedSort} {$dir}
                 LIMIT 120";
@@ -412,8 +426,8 @@ if (mx_panel_is_logged_in()) {
                       <span class="route-line"><span class="route-label">Alım</span><span class="route-text"><?= mx_h($pickupShort) ?></span></span>
                       <span class="route-line"><span class="route-label">Teslim</span><span class="route-text"><?= mx_h($dropoffShort) ?></span></span>
                     </td>
-                    <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '-' ?></td>
-                    <td><?= mx_h($request['price']) ?></td>
+                    <td><?= $request['distance_km'] !== null ? mx_h(number_format((float) $request['distance_km'], 1, ',', '.')) . ' km' : '<span class="manual-price-note">Teyit</span>' ?></td>
+                    <td><?= mx_h($request['price']) ?><?= ($request['distance_type'] ?? '') !== 'route' ? '<br><small class="manual-price-note">Operasyon teyidi</small>' : '' ?></td>
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
                     <td>
                       <?php if (!empty($request['courier_phone'])): ?>

@@ -13,6 +13,7 @@ const scheduleDateField = document.querySelector('[data-schedule-date]');
 const scheduleTimeFields = document.querySelectorAll('[data-schedule-time]');
 const accountAddressForm = document.querySelector('[data-account-address-form]');
 const addressSearchTimers = new WeakMap();
+const estimateTimers = new WeakMap();
 
 if (header && !menuToggle) {
   menuToggle = document.createElement('button');
@@ -75,6 +76,7 @@ const istanbulDistricts = [
 ];
 
 const addressLocations = [
+  ...(Array.isArray(window.MX_ISTANBUL_LOCATIONS) ? window.MX_ISTANBUL_LOCATIONS : []),
   ...istanbulDistricts.map((district) => ({
     ...district,
     display: district.name,
@@ -150,7 +152,6 @@ let packageFees = {
 };
 
 let pricingRules = {
-  routeMultiplier: 1.28,
   minSameAreaKm: 4,
   minDefaultKm: 7,
   bridgeFee: 90,
@@ -171,22 +172,43 @@ const selectedLocationForInput = (input) => {
     lat: Number(input.dataset.selectedLat),
     lng: Number(input.dataset.selectedLng),
     type: input.dataset.selectedType || 'Adres',
+    district: input.dataset.selectedDistrict || '',
+    neighborhood: input.dataset.selectedNeighborhood || '',
+    source: input.dataset.selectedSource || 'local',
   };
 };
 
-const calculateDistance = (from, to) => {
-  const earthRadius = 6371;
-  const latDelta = (to.lat - from.lat) * Math.PI / 180;
-  const lngDelta = (to.lng - from.lng) * Math.PI / 180;
-  const a = Math.sin(latDelta / 2) ** 2
-    + Math.cos(from.lat * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180)
-    * Math.sin(lngDelta / 2) ** 2;
-  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+const manualPriceText = 'Mesafe teyidi sonrası fiyatlandırılır';
+
+const routeEstimatePayload = (form) => {
+  const pickupInput = form?.elements.pickup;
+  const dropoffInput = form?.elements.dropoff;
+  const pickup = selectedLocationForInput(pickupInput);
+  const dropoff = selectedLocationForInput(dropoffInput);
+  if (!pickup || !dropoff) return null;
+  return {
+    pickup: pickupInput.value.trim(),
+    dropoff: dropoffInput.value.trim(),
+    pickupStreet: form.elements.pickupStreet?.value?.trim() || '',
+    dropoffStreet: form.elements.dropoffStreet?.value?.trim() || '',
+    pickupLat: pickup.lat,
+    pickupLng: pickup.lng,
+    dropoffLat: dropoff.lat,
+    dropoffLng: dropoff.lng,
+    service: form.elements.service?.value || 'normal',
+    packageType: form.elements.packageType?.value || 'evrak',
+  };
 };
 
-const formatPrice = (value) => {
-  const roundTo = Number(pricingRules.roundTo) > 0 ? Number(pricingRules.roundTo) : 10;
-  return `${Math.round(value / roundTo) * roundTo} TL`;
+const fetchRouteEstimate = async (form) => {
+  const payload = routeEstimatePayload(form);
+  if (!payload) return null;
+  const response = await fetch('api/price-estimate.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return response.ok ? response.json() : null;
 };
 
 const loadPricingConfig = async () => {
@@ -272,46 +294,19 @@ const updatePriceEstimate = () => {
 
   const pickup = selectedLocationForInput(deliveryForm.elements.pickup);
   const dropoff = selectedLocationForInput(deliveryForm.elements.dropoff);
-  const service = servicePricing[deliveryForm.elements.service?.value] || servicePricing.normal;
-  const packageFee = packageFees[deliveryForm.elements.packageType?.value] || 0;
 
   if (!pickup || !dropoff) {
-    priceEstimate.querySelector('strong').textContent = 'Adres seçince hesaplanır';
+    priceEstimate.querySelector('strong').textContent = manualPriceText;
     return;
   }
 
-  const rawDistance = calculateDistance(pickup, dropoff);
-  const billableDistance = Math.max(
-    rawDistance * Number(pricingRules.routeMultiplier),
-    pickup.display === dropoff.display ? Number(pricingRules.minSameAreaKm) : Number(pricingRules.minDefaultKm)
-  );
-  const bridgeFee = pickup.lng < 29 && dropoff.lng >= 29 || pickup.lng >= 29 && dropoff.lng < 29 ? Number(pricingRules.bridgeFee) : 0;
-  const estimate = (service.base + billableDistance * service.km + packageFee + bridgeFee) * service.multiplier;
-  const min = estimate * Number(pricingRules.homeMinFactor);
-  const max = estimate * Number(pricingRules.homeMaxFactor);
-
-  priceEstimate.querySelector('strong').textContent = `${formatPrice(min)} - ${formatPrice(max)}`;
-};
-
-const calculateEstimate = (pickup, dropoff, serviceValue = 'normal', packageValue = 'evrak') => {
-  const service = servicePricing[serviceValue] || servicePricing.normal;
-  const packageFee = packageFees[packageValue] || 0;
-  const rawDistance = calculateDistance(pickup, dropoff);
-  const billableDistance = Math.max(
-    rawDistance * Number(pricingRules.routeMultiplier),
-    pickup.display === dropoff.display ? Number(pricingRules.minSameAreaKm) : Number(pricingRules.minDefaultKm)
-  );
-  const bridgeFee = pickup.lng < 29 && dropoff.lng >= 29 || pickup.lng >= 29 && dropoff.lng < 29 ? Number(pricingRules.bridgeFee) : 0;
-  const estimate = (service.base + billableDistance * service.km + packageFee + bridgeFee) * service.multiplier;
-  return formatPrice(estimate);
-};
-
-const calculateBillableDistance = (pickup, dropoff) => {
-  const rawDistance = calculateDistance(pickup, dropoff);
-  return Math.max(
-    rawDistance * Number(pricingRules.routeMultiplier),
-    pickup.display === dropoff.display ? Number(pricingRules.minSameAreaKm) : Number(pricingRules.minDefaultKm)
-  );
+  priceEstimate.querySelector('strong').textContent = 'Rota mesafesi kontrol ediliyor...';
+  window.clearTimeout(estimateTimers.get(deliveryForm));
+  estimateTimers.set(deliveryForm, window.setTimeout(async () => {
+    const data = await fetchRouteEstimate(deliveryForm).catch(() => null);
+    const result = data?.ok && data.price?.distance_type === 'route' ? data.price : null;
+    priceEstimate.querySelector('strong').textContent = result?.price || manualPriceText;
+  }, 320));
 };
 
 const updateDetailEstimate = () => {
@@ -322,22 +317,29 @@ const updateDetailEstimate = () => {
   const target = detailPriceEstimate.querySelector('strong');
 
   if (!pickup || !dropoff) {
-    detailPriceEstimate.hidden = true;
-    target.textContent = 'Mahalleleri seçince hesaplanır';
+    detailPriceEstimate.hidden = false;
+    target.textContent = manualPriceText;
     if (requestSummary?.querySelector('[data-summary-price]')) {
-      requestSummary.querySelector('[data-summary-price]').textContent = 'Mahalleleri seçince hesaplanır';
+      requestSummary.querySelector('[data-summary-price]').textContent = manualPriceText;
     }
     return;
   }
 
   detailPriceEstimate.hidden = false;
-  const serviceValue = detailForm.elements.service.value;
-  const packageValue = detailForm.elements.packageType.value;
-  const estimate = calculateEstimate(pickup, dropoff, serviceValue, packageValue);
-  target.textContent = estimate;
+  target.textContent = 'Rota mesafesi kontrol ediliyor...';
   if (requestSummary?.querySelector('[data-summary-price]')) {
-    requestSummary.querySelector('[data-summary-price]').textContent = estimate;
+    requestSummary.querySelector('[data-summary-price]').textContent = target.textContent;
   }
+  window.clearTimeout(estimateTimers.get(detailForm));
+  estimateTimers.set(detailForm, window.setTimeout(async () => {
+    const data = await fetchRouteEstimate(detailForm).catch(() => null);
+    const result = data?.ok && data.price?.distance_type === 'route' ? data.price : null;
+    const text = result?.price || manualPriceText;
+    target.textContent = text;
+    if (requestSummary?.querySelector('[data-summary-price]')) {
+      requestSummary.querySelector('[data-summary-price]').textContent = text;
+    }
+  }, 320));
 };
 
 const closeAutocomplete = (input) => {
@@ -355,7 +357,8 @@ const addressPartsFromLocation = (location) => {
   const parts = location.addressParts || {};
   return {
     city: parts.city || 'İstanbul',
-    district: parts.district || districtFromDisplay(location.display),
+    district: parts.district || location.district || districtFromDisplay(location.display),
+    neighborhood: parts.neighborhood || location.neighborhood || '',
     road: parts.road || (['Cadde', 'Bulvar', 'Cadde/Sokak'].includes(location.type) ? String(location.display).split(',')[0].trim() : ''),
     buildingNo: parts.buildingNo || '',
   };
@@ -384,6 +387,9 @@ const selectLocation = (input, location) => {
   input.dataset.selectedLat = String(location.lat);
   input.dataset.selectedLng = String(location.lng);
   input.dataset.selectedType = location.type;
+  input.dataset.selectedDistrict = location.district || location.addressParts?.district || districtFromDisplay(location.display);
+  input.dataset.selectedNeighborhood = location.neighborhood || location.addressParts?.neighborhood || '';
+  input.dataset.selectedSource = location.source || (location.addressParts ? 'nominatim' : 'local');
   fillDetailAddressParts(input, location);
   addressInputs.forEach(closeAutocomplete);
   window.setTimeout(() => input.blur(), 0);
@@ -430,9 +436,11 @@ const fetchRemoteLocations = async (query) => {
         addressParts: {
           city: result.address?.city || result.address?.province || result.address?.state || 'İstanbul',
           district: result.address?.town || result.address?.county || result.address?.city_district || '',
+          neighborhood: result.address?.neighbourhood || result.address?.suburb || result.address?.quarter || '',
           road: result.address?.road || result.address?.pedestrian || result.address?.footway || result.address?.cycleway || result.address?.path || '',
           buildingNo: result.address?.house_number || '',
         },
+        source: 'nominatim',
       }))
       .filter((result) => Number.isFinite(result.lat) && Number.isFinite(result.lng));
   } catch {
@@ -535,6 +543,7 @@ const renderAutocomplete = async (input) => {
 
   if (localMatches.length) {
     renderOptions(input, localMatches);
+    return;
   } else {
     renderAutocompleteStatus(input, 'İstanbul adresleri aranıyor...');
   }
@@ -596,8 +605,8 @@ deliveryForm?.addEventListener('submit', (event) => {
   const pickup = deliveryForm.elements.pickup.value.trim();
   const dropoff = deliveryForm.elements.dropoff.value.trim();
 
-  if (!pickup || !dropoff || !selectedLocationForInput(deliveryForm.elements.pickup) || !selectedLocationForInput(deliveryForm.elements.dropoff)) {
-    button.textContent = 'Listeden adres seçin';
+  if (!pickup || !dropoff) {
+    button.textContent = 'Adresleri yazın';
     window.setTimeout(() => {
       button.textContent = 'Talep Oluştur';
     }, 1600);
@@ -609,10 +618,16 @@ deliveryForm?.addEventListener('submit', (event) => {
   const params = new URLSearchParams({
     pickup,
     dropoff,
-    pickupLat: deliveryForm.elements.pickup.dataset.selectedLat,
-    pickupLng: deliveryForm.elements.pickup.dataset.selectedLng,
-    dropoffLat: deliveryForm.elements.dropoff.dataset.selectedLat,
-    dropoffLng: deliveryForm.elements.dropoff.dataset.selectedLng,
+    pickupLat: deliveryForm.elements.pickup.dataset.selectedLat || '',
+    pickupLng: deliveryForm.elements.pickup.dataset.selectedLng || '',
+    dropoffLat: deliveryForm.elements.dropoff.dataset.selectedLat || '',
+    dropoffLng: deliveryForm.elements.dropoff.dataset.selectedLng || '',
+    pickupDistrict: deliveryForm.elements.pickup.dataset.selectedDistrict || '',
+    pickupNeighborhood: deliveryForm.elements.pickup.dataset.selectedNeighborhood || '',
+    pickupAddressSource: deliveryForm.elements.pickup.dataset.selectedSource || 'manual',
+    dropoffDistrict: deliveryForm.elements.dropoff.dataset.selectedDistrict || '',
+    dropoffNeighborhood: deliveryForm.elements.dropoff.dataset.selectedNeighborhood || '',
+    dropoffAddressSource: deliveryForm.elements.dropoff.dataset.selectedSource || 'manual',
     price: priceEstimate?.querySelector('strong')?.textContent || 'Hesaplanamadı',
   });
 
@@ -686,6 +701,9 @@ const fillDetailFormFromParams = () => {
       input.dataset.selectedLat = lat;
       input.dataset.selectedLng = lng;
       input.dataset.selectedType = 'Mahalle/Semt';
+      input.dataset.selectedDistrict = params.get(`${name}District`) || districtFromDisplay(input.value);
+      input.dataset.selectedNeighborhood = params.get(`${name}Neighborhood`) || '';
+      input.dataset.selectedSource = params.get(`${name}AddressSource`) || 'local';
       const cityInput = detailForm.elements[`${name}City`];
       const districtInput = detailForm.elements[`${name}District`];
       if (cityInput && !cityInput.value.trim()) cityInput.value = 'İstanbul';
@@ -730,8 +748,8 @@ detailForm?.addEventListener('submit', (event) => {
       ? !isValidTckn(input.value.trim())
       : input.value.trim() !== '' && !isValidTckn(input.value.trim()));
 
-  if (!selectedLocationForInput(pickup) || !selectedLocationForInput(dropoff)) {
-    button.textContent = 'Mahalleleri listeden seçin';
+  if (!pickup.value.trim() || !dropoff.value.trim()) {
+    button.textContent = 'Ana adresleri yazın';
     window.setTimeout(() => {
       button.textContent = 'Talebi Tamamla';
     }, 1600);
@@ -751,12 +769,20 @@ detailForm?.addEventListener('submit', (event) => {
   const selectedPackage = detailForm.querySelector('input[name="packageType"]:checked');
   const payload = Object.fromEntries(formData.entries());
 
-  payload.pickupLat = pickup.dataset.selectedLat;
-  payload.pickupLng = pickup.dataset.selectedLng;
-  payload.dropoffLat = dropoff.dataset.selectedLat;
-  payload.dropoffLng = dropoff.dataset.selectedLng;
-  payload.price = detailPriceEstimate?.querySelector('[data-summary-price]')?.textContent || 'Hesaplanamadı';
-  payload.distanceKm = calculateBillableDistance(selectedLocationForInput(pickup), selectedLocationForInput(dropoff)).toFixed(2);
+  payload.pickupCity = 'İstanbul';
+  payload.dropoffCity = 'İstanbul';
+  payload.pickupLat = pickup.dataset.selectedLat || '';
+  payload.pickupLng = pickup.dataset.selectedLng || '';
+  payload.dropoffLat = dropoff.dataset.selectedLat || '';
+  payload.dropoffLng = dropoff.dataset.selectedLng || '';
+  payload.pickupDistrict = pickup.dataset.selectedDistrict || '';
+  payload.pickupNeighborhood = pickup.dataset.selectedNeighborhood || '';
+  payload.pickupAddressSource = pickup.dataset.selectedSource || 'manual';
+  payload.dropoffDistrict = dropoff.dataset.selectedDistrict || '';
+  payload.dropoffNeighborhood = dropoff.dataset.selectedNeighborhood || '';
+  payload.dropoffAddressSource = dropoff.dataset.selectedSource || 'manual';
+  payload.price = detailPriceEstimate?.querySelector('[data-summary-price]')?.textContent || manualPriceText;
+  payload.distanceKm = '';
   payload.serviceLabel = selectedService?.nextElementSibling?.textContent?.trim() || payload.service;
   payload.packageLabel = selectedPackage?.nextElementSibling?.textContent?.trim() || payload.packageType;
   payload.serviceAgreement = detailForm.elements.serviceAgreement.checked;
@@ -896,6 +922,7 @@ const renderTrackingResult = (data) => {
     ['Teslimat tercihi', request.delivery_time],
     ['Mesafe', request.distance_km ? `${request.distance_km} km` : '-'],
     ['Ücret', request.price || '-'],
+    ['Fiyat durumu', request.distance_type === 'route' ? 'Rota mesafesiyle hesaplandı' : 'Operasyon teyidi gerekli'],
     ['Oluşturma', formatTrackingDate(request.created_at)],
   ];
 
