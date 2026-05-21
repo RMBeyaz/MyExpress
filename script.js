@@ -14,6 +14,7 @@ const scheduleTimeFields = document.querySelectorAll('[data-schedule-time]');
 const accountAddressForm = document.querySelector('[data-account-address-form]');
 const addressSearchTimers = new WeakMap();
 const estimateTimers = new WeakMap();
+const estimateRequestIds = new WeakMap();
 
 if (header && !menuToggle) {
   menuToggle = document.createElement('button');
@@ -207,7 +208,8 @@ const routeEstimatePayload = (form) => {
 const fetchRouteEstimate = async (form) => {
   const payload = routeEstimatePayload(form);
   if (!payload) return null;
-  console.debug('[MyExpress fiyat] rota istegi', {
+  console.debug('[price-estimate] request', {
+    payload,
     pickup: payload.pickup,
     pickupLat: payload.pickupLat,
     pickupLng: payload.pickupLng,
@@ -231,14 +233,27 @@ const fetchRouteEstimate = async (form) => {
     return null;
   });
   if (!data) return null;
+  console.debug('[price-estimate] response', { response: data });
+  console.debug('[price-estimate] result', {
+    status: data?.status || data?.price?.status,
+    fallback_reason: data?.fallback_reason || data?.price?.fallback_reason,
+    pickup_geocode_status: data?.pickup_geocode_status || data?.price?.pickup_geocode_status || data?.price?.geocode_status,
+    dropoff_geocode_status: data?.dropoff_geocode_status || data?.price?.dropoff_geocode_status || data?.price?.geocode_status,
+    route_status: data?.route_status || data?.price?.route_status,
+    route_distance_km: data?.route_distance_km || data?.price?.route_distance_km,
+    price: data?.calculated_price || data?.price?.price,
+    api_key_present: data?.api_key_present ?? data?.price?.api_key_present,
+  });
   console.debug('[MyExpress fiyat] rota cevabi', {
     ok: data?.ok,
     geocodeStatus: data?.price?.geocode_status,
-    routingStatus: data?.price?.route_status,
-    distanceType: data?.price?.distance_type,
-    routeDistance: data?.price?.route_distance_km,
-    price: data?.price?.price,
-    fallbackReason: data?.price?.fallback_reason || data?.price?.route_status,
+    pickupGeocodeStatus: data?.pickup_geocode_status || data?.price?.pickup_geocode_status,
+    dropoffGeocodeStatus: data?.dropoff_geocode_status || data?.price?.dropoff_geocode_status,
+    routingStatus: data?.route_status || data?.price?.route_status,
+    distanceType: data?.distance_type || data?.price?.distance_type,
+    routeDistance: data?.route_distance_km || data?.price?.route_distance_km,
+    price: data?.calculated_price || data?.price?.price,
+    fallbackReason: data?.fallback_reason || data?.price?.fallback_reason || data?.price?.route_status,
   });
   return data;
 };
@@ -335,11 +350,14 @@ const updatePriceEstimate = () => {
 
   priceEstimate.querySelector('strong').textContent = 'Rota mesafesi kontrol ediliyor...';
   window.clearTimeout(estimateTimers.get(deliveryForm));
+  const requestId = (estimateRequestIds.get(deliveryForm) || 0) + 1;
+  estimateRequestIds.set(deliveryForm, requestId);
   estimateTimers.set(deliveryForm, window.setTimeout(async () => {
     const data = await fetchRouteEstimate(deliveryForm).catch((error) => {
       console.debug('[MyExpress fiyat] rota istegi basarisiz', { error: error?.message || String(error) });
       return null;
     });
+    if (estimateRequestIds.get(deliveryForm) !== requestId) return;
     const result = data?.ok && data.price?.distance_type === 'route' ? data.price : null;
     priceEstimate.querySelector('strong').textContent = result?.price || manualPriceText;
   }, 320));
@@ -367,11 +385,14 @@ const updateDetailEstimate = () => {
     requestSummary.querySelector('[data-summary-price]').textContent = target.textContent;
   }
   window.clearTimeout(estimateTimers.get(detailForm));
+  const requestId = (estimateRequestIds.get(detailForm) || 0) + 1;
+  estimateRequestIds.set(detailForm, requestId);
   estimateTimers.set(detailForm, window.setTimeout(async () => {
     const data = await fetchRouteEstimate(detailForm).catch((error) => {
       console.debug('[MyExpress fiyat] detay rota istegi basarisiz', { error: error?.message || String(error) });
       return null;
     });
+    if (estimateRequestIds.get(detailForm) !== requestId) return;
     const result = data?.ok && data.price?.distance_type === 'route' ? data.price : null;
     const text = result?.price || manualPriceText;
     target.textContent = text;
