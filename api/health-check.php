@@ -58,6 +58,9 @@ $checks = [
         'courier_requests.route_distance_km' => false,
         'courier_requests.route_status' => false,
         'customers.tckn' => false,
+        'customers.email_verification_code' => false,
+        'customers.email_verification_token' => false,
+        'customers.email_verification_expires_at' => false,
         'customer_addresses.contact_email' => false,
         'customer_addresses.contact_tckn' => false,
         'customer_invoices.request_id' => false,
@@ -107,6 +110,9 @@ try {
         $checks['columns']['courier_requests.' . $column] = mx_column_exists('courier_requests', $column);
     }
     $checks['columns']['customers.tckn'] = mx_column_exists('customers', 'tckn');
+    $checks['columns']['customers.email_verification_code'] = mx_column_exists('customers', 'email_verification_code');
+    $checks['columns']['customers.email_verification_token'] = mx_column_exists('customers', 'email_verification_token');
+    $checks['columns']['customers.email_verification_expires_at'] = mx_column_exists('customers', 'email_verification_expires_at');
     $checks['columns']['customer_addresses.contact_email'] = mx_column_exists('customer_addresses', 'contact_email');
     $checks['columns']['customer_addresses.contact_tckn'] = mx_column_exists('customer_addresses', 'contact_tckn');
     $checks['columns']['customer_invoices.request_id'] = mx_column_exists('customer_invoices', 'request_id');

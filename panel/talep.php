@@ -49,6 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $log->execute([':id' => $id, ':status' => $status, ':note' => $note]);
         $pdo->commit();
         mx_audit_log($id, 'status_update', 'Durum ' . mx_status_label($status) . ' olarak guncellendi. Not: ' . $note);
+        $updatedRequest = mx_request_by_id($id);
+        if ($updatedRequest) {
+            mx_send_request_customer_mail(
+                $updatedRequest,
+                'MyExpress gönderi durumu güncellendi: ' . $updatedRequest['tracking_code'],
+                'Gönderi durumunuz güncellendi.',
+                'Yeni durum: ' . mx_status_label($status) . ($note !== '' ? "\nNot: " . $note : '')
+            );
+        }
     }
 
     if ($id > 0 && $action === 'assign_courier') {
@@ -75,10 +84,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $pdo->commit();
                 mx_audit_log($id, 'courier_assign', $courier['full_name'] . ' kuryesi atandi. Telefon: ' . $courier['phone']);
+                $updatedRequest = mx_request_by_id($id);
+                if ($updatedRequest) {
+                    mx_send_request_customer_mail(
+                        $updatedRequest,
+                        'MyExpress kurye ataması yapıldı: ' . $updatedRequest['tracking_code'],
+                        'Gönderiniz için kurye ataması yapıldı.',
+                        'Operasyon ekibimiz gönderinizi kurye sürecine aldı.'
+                    );
+                }
             }
         } else {
             $pdo->prepare('UPDATE courier_requests SET assigned_courier_id = NULL WHERE id = :id')->execute([':id' => $id]);
             mx_audit_log($id, 'courier_unassign', 'Kurye atamasi kaldirildi.');
+            $updatedRequest = mx_request_by_id($id);
+            if ($updatedRequest) {
+                mx_send_request_customer_mail(
+                    $updatedRequest,
+                    'MyExpress talebiniz güncellendi: ' . $updatedRequest['tracking_code'],
+                    'Talebinizde operasyon güncellemesi yapıldı.',
+                    'Kurye ataması operasyon ekibi tarafından yeniden düzenleniyor.'
+                );
+            }
         }
     }
 
@@ -199,6 +226,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute($params);
         $changeNote = mx_clean_text($_POST['change_note'] ?? '', 1000);
         mx_audit_log($id, 'details_update', 'Talep detaylari panelden guncellendi.' . ($changeNote !== '' ? ' Not: ' . $changeNote : ''));
+        $updatedRequest = mx_request_by_id($id);
+        if ($updatedRequest) {
+            mx_send_request_customer_mail(
+                $updatedRequest,
+                'MyExpress talep bilgileriniz güncellendi: ' . $updatedRequest['tracking_code'],
+                'Talep bilgileriniz güncellendi.',
+                $changeNote !== '' ? 'Not: ' . $changeNote : 'Operasyon ekibimiz talebinizde gerekli düzenlemeyi yaptı.'
+            );
+        }
     }
 
     header('Location: talep.php?id=' . $id);

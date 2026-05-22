@@ -268,13 +268,16 @@ try {
             'Panel: https://myexpress.com.tr/panel/',
         ]);
 
-        if (function_exists('mail')) {
-            $sent = @mail($mailTo, $subject, $message, 'From: MyExpress <info@myexpress.com.tr>');
-            if (!$sent) {
-                error_log('[MyExpress] talep mail gonderilemedi | tracking_code=' . $trackingCode);
-            }
-        } else {
-            error_log('[MyExpress] PHP mail fonksiyonu kapali | tracking_code=' . $trackingCode);
+        mx_send_mail((string) $mailTo, $subject, $message);
+
+        $requestForMail = mx_request_by_id($requestId);
+        if ($requestForMail) {
+            mx_send_request_customer_mail(
+                $requestForMail,
+                'MyExpress kurye talebiniz alındı: ' . $trackingCode,
+                'Kurye talebiniz alındı.',
+                'Talebiniz operasyon ekibimize ulaştı. Gönderi durumunu talep numaranızla takip edebilirsiniz.'
+            );
         }
     } catch (Throwable $mailError) {
         mx_log_error('talep mail failed', $mailError, ['tracking_code' => $trackingCode]);

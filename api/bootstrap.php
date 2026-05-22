@@ -464,6 +464,137 @@ function mx_whatsapp_url(string $phone, string $message = ''): string
     return 'https://wa.me/' . $digits . ($message !== '' ? '?text=' . rawurlencode($message) : '');
 }
 
+function mx_site_url(string $path = ''): string
+{
+    $base = rtrim((string) (mx_config()['site_url'] ?? 'https://myexpress.com.tr'), '/');
+    $path = '/' . ltrim($path, '/');
+    return $base . ($path === '/' ? '/' : $path);
+}
+
+function mx_send_mail(string $to, string $subject, string $message, array $headers = []): bool
+{
+    $to = trim($to);
+    if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    if (!function_exists('mail')) {
+        error_log('[MyExpress] PHP mail fonksiyonu kapali | subject=' . $subject);
+        return false;
+    }
+
+    $defaultHeaders = [
+        'From: MyExpress <info@myexpress.com.tr>',
+        'Reply-To: MyExpress <info@myexpress.com.tr>',
+        'Content-Type: text/plain; charset=UTF-8',
+    ];
+    $mailHeaders = implode("\r\n", array_merge($defaultHeaders, $headers));
+    $sent = @mail($to, $subject, $message, $mailHeaders);
+    if (!$sent) {
+        error_log('[MyExpress] mail gonderilemedi | to=' . $to . ' | subject=' . $subject);
+    }
+    return $sent;
+}
+
+function mx_request_public_url(string $trackingCode): string
+{
+    return mx_site_url('takip.html?no=' . rawurlencode($trackingCode));
+}
+
+function mx_customer_verification_code(): string
+{
+    return (string) random_int(100000, 999999);
+}
+
+function mx_send_customer_verification_mail(string $email, string $fullName, string $code, string $token): bool
+{
+    $verifyUrl = mx_site_url('hesabim/onay.php?token=' . rawurlencode($token));
+    $message = implode("\n", [
+        'Merhaba ' . $fullName . ',',
+        '',
+        'MyExpress hesabınızı aktifleştirmek için aşağıdaki onay kodunu kullanın:',
+        '',
+        $code,
+        '',
+        'Alternatif olarak bu bağlantıyı açabilirsiniz:',
+        $verifyUrl,
+        '',
+        'Bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayın.',
+        '',
+        'MyExpress',
+    ]);
+
+    return mx_send_mail($email, 'MyExpress hesap onay kodunuz', $message);
+}
+
+function mx_request_mail_recipients(array $request): array
+{
+    $emails = [];
+    foreach (['sender_email', 'recipient_email'] as $key) {
+        $email = trim((string) ($request[$key] ?? ''));
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $emails[] = $email;
+        }
+    }
+
+    if (!empty($request['customer_id']) && mx_table_exists('customers')) {
+        try {
+            $stmt = mx_pdo()->prepare('SELECT email FROM customers WHERE id = :id LIMIT 1');
+            $stmt->execute([':id' => (int) $request['customer_id']]);
+            $email = trim((string) ($stmt->fetchColumn() ?: ''));
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $emails[] = $email;
+            }
+        } catch (Throwable $error) {
+            mx_log_error('request customer email lookup failed', $error, ['request_id' => $request['id'] ?? null]);
+        }
+    }
+
+    return array_values(array_unique($emails));
+}
+
+function mx_request_mail_message(array $request, string $title, string $body = ''): string
+{
+    $trackingCode = (string) ($request['tracking_code'] ?? '');
+    $lines = [
+        $title,
+        '',
+        'Talep No: ' . $trackingCode,
+        'Durum: ' . mx_status_label((string) ($request['status'] ?? '')),
+        'Alım: ' . (string) ($request['pickup'] ?? ''),
+        'Teslim: ' . (string) ($request['dropoff'] ?? ''),
+        'Ücret: ' . (string) ($request['price'] ?? ''),
+    ];
+    if ($body !== '') {
+        $lines[] = '';
+        $lines[] = $body;
+    }
+    $lines[] = '';
+    $lines[] = 'Gönderi durumunu takip etmek için:';
+    $lines[] = mx_request_public_url($trackingCode);
+    $lines[] = '';
+    $lines[] = 'MyExpress';
+    return implode("\n", $lines);
+}
+
+function mx_send_request_customer_mail(array $request, string $subject, string $title, string $body = ''): void
+{
+    foreach (mx_request_mail_recipients($request) as $email) {
+        mx_send_mail($email, $subject, mx_request_mail_message($request, $title, $body));
+    }
+}
+
+function mx_request_by_id(int $requestId): ?array
+{
+    if ($requestId <= 0 || !mx_table_exists('courier_requests')) {
+        return null;
+    }
+
+    $stmt = mx_pdo()->prepare('SELECT * FROM courier_requests WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $requestId]);
+    $request = $stmt->fetch();
+    return $request ?: null;
+}
+
 function mx_invoice_absolute_path(string $filePath): ?string
 {
     $filePath = trim($filePath);

@@ -11,6 +11,7 @@ if (mx_customer_is_logged_in()) {
 }
 
 $error = '';
+$message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if (!mx_table_exists('customers')) {
@@ -37,17 +38,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('KVKK bilgilendirmesini onaylamalısınız.');
         }
 
-        $stmt = mx_pdo()->prepare(
-            'INSERT INTO customers (full_name, email, phone, tckn, password_hash, is_active)
-             VALUES (:full_name, :email, :phone, :tckn, :password_hash, 1)'
-        );
-        $stmt->execute([
+        $pdo = mx_pdo();
+        $verificationCode = mx_customer_verification_code();
+        $verificationToken = bin2hex(random_bytes(32));
+        $hasVerifyColumns = mx_column_exists('customers', 'email_verification_code')
+            && mx_column_exists('customers', 'email_verification_token')
+            && mx_column_exists('customers', 'email_verification_expires_at');
+        $columns = 'full_name, email, phone, tckn, password_hash, is_active';
+        $values = ':full_name, :email, :phone, :tckn, :password_hash, :is_active';
+        $params = [
             ':full_name' => $fullName,
             ':email' => $email,
             ':phone' => $phone,
             ':tckn' => $tckn,
             ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
-        ]);
+            ':is_active' => $hasVerifyColumns ? 0 : 1,
+        ];
+        if ($hasVerifyColumns) {
+            $columns .= ', email_verification_code, email_verification_token, email_verification_expires_at';
+            $values .= ', :email_verification_code, :email_verification_token, DATE_ADD(NOW(), INTERVAL 30 MINUTE)';
+            $params[':email_verification_code'] = $verificationCode;
+            $params[':email_verification_token'] = hash('sha256', $verificationToken);
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO customers ({$columns}) VALUES ({$values})");
+        $stmt->execute($params);
+
+        if ($hasVerifyColumns) {
+            mx_send_customer_verification_mail($email, $fullName, $verificationCode, $verificationToken);
+            header('Location: onay.php?email=' . rawurlencode($email));
+            exit;
+        }
 
         mx_customer_login($email, $password);
         header('Location: index.php');
@@ -68,7 +89,7 @@ mx_account_header('Üye Ol', 'login');
   </div>
   <form class="account-card account-form" method="post">
     <h2>Hesap oluştur</h2>
-    <?php mx_account_flash('', $error); ?>
+    <?php mx_account_flash($message, $error); ?>
     <label>Ad soyad<input name="full_name" required autocomplete="name"></label>
     <label>E-posta<input type="email" name="email" required autocomplete="email"></label>
     <label>Telefon<input type="tel" name="phone" required autocomplete="tel"></label>

@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php');
         exit;
     } else {
-        $error = 'Giriş bilgileri hatalı veya hesap pasif.';
+        $error = 'Giriş bilgileri hatalı veya hesap pasif. Yeni üye olduysanız e-posta onay kodunu kontrol edin.';
     }
 }
 
@@ -39,7 +39,7 @@ mx_account_header('Müşteri Girişi', 'login');
     <label>E-posta<input type="email" name="email" required autocomplete="email"></label>
     <label>Şifre<input type="password" name="password" required autocomplete="current-password"></label>
     <button class="btn btn-primary" type="submit">Giriş Yap</button>
-    <p class="account-muted">Hesabınız yok mu? <a href="kayit.php">Üye olun</a>.</p>
+    <p class="account-muted">Hesabınız yok mu? <a href="kayit.php">Üye olun</a>. Kodunuz varsa <a href="onay.php">hesabınızı aktifleştirin</a>.</p>
   </form>
 </section>
 <?php mx_account_footer(); ?>

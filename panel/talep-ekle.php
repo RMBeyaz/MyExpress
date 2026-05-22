@@ -157,6 +157,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $pdo->commit();
         mx_audit_log($requestId, 'request_manual_create', 'Panelden manuel talep oluşturuldu. Talep: ' . $trackingCode);
+        $createdRequest = mx_request_by_id($requestId);
+        if ($createdRequest) {
+            mx_send_request_customer_mail(
+                $createdRequest,
+                'MyExpress kurye talebiniz oluşturuldu: ' . $trackingCode,
+                'Kurye talebiniz oluşturuldu.',
+                'Operasyon ekibimiz talebinizi panele kaydetti. Gönderi durumunu talep numaranızla takip edebilirsiniz.'
+            );
+        }
         header('Location: talep.php?id=' . $requestId);
         exit;
     } catch (Throwable $exception) {
