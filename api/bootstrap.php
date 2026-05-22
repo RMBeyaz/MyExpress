@@ -471,24 +471,161 @@ function mx_site_url(string $path = ''): string
     return $base . ($path === '/' ? '/' : $path);
 }
 
+function mx_mail_from_address(): string
+{
+    $config = mx_config();
+    $from = trim((string) ($config['mail_from'] ?? $config['smtp_user'] ?? $config['mail_to'] ?? 'info@myexpress.com.tr'));
+    return filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : 'info@myexpress.com.tr';
+}
+
+function mx_mail_from_name(): string
+{
+    return mx_clean_string(mx_config()['mail_from_name'] ?? 'MyExpress', 80);
+}
+
+function mx_mail_header_encode(string $value): string
+{
+    if (function_exists('mb_encode_mimeheader')) {
+        return mb_encode_mimeheader($value, 'UTF-8', 'B', "\r\n");
+    }
+
+    return '=?UTF-8?B?' . base64_encode($value) . '?=';
+}
+
+function mx_smtp_read_response($socket): string
+{
+    $response = '';
+    while (($line = fgets($socket, 515)) !== false) {
+        $response .= $line;
+        if (preg_match('/^\d{3}\s/', $line)) {
+            break;
+        }
+    }
+
+    return $response;
+}
+
+function mx_smtp_expect($socket, array $codes, string $context): string
+{
+    $response = mx_smtp_read_response($socket);
+    $code = (int) substr($response, 0, 3);
+    if (!in_array($code, $codes, true)) {
+        throw new RuntimeException($context . ' failed with SMTP code ' . ($code ?: 'unknown'));
+    }
+
+    return $response;
+}
+
+function mx_smtp_command($socket, string $command, array $codes, string $context): string
+{
+    fwrite($socket, $command . "\r\n");
+    return mx_smtp_expect($socket, $codes, $context);
+}
+
+function mx_smtp_send_mail(string $to, string $subject, string $message, array $headers = []): bool
+{
+    $config = mx_config();
+    $host = trim((string) ($config['smtp_host'] ?? ''));
+    $user = trim((string) ($config['smtp_user'] ?? ''));
+    $pass = (string) ($config['smtp_pass'] ?? '');
+
+    if ($host === '' || $user === '' || $pass === '') {
+        error_log('[MyExpress] smtp config eksik | host=' . ($host !== '' ? 'present' : 'missing') . ' | user=' . ($user !== '' ? 'present' : 'missing') . ' | pass=' . ($pass !== '' ? 'present' : 'missing'));
+        return false;
+    }
+
+    if (!function_exists('stream_socket_client')) {
+        error_log('[MyExpress] smtp gonderimi yapilamadi | stream_socket_client kapali');
+        return false;
+    }
+
+    $secure = strtolower(trim((string) ($config['smtp_secure'] ?? 'ssl')));
+    $port = (int) ($config['smtp_port'] ?? ($secure === 'ssl' ? 465 : 587));
+    $target = ($secure === 'ssl' ? 'ssl://' : '') . $host . ':' . $port;
+    $errno = 0;
+    $errstr = '';
+    $socket = @stream_socket_client($target, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
+
+    if (!$socket) {
+        error_log('[MyExpress] smtp baglanti hatasi | host=' . $host . ' | port=' . $port . ' | code=' . $errno . ' | error=' . $errstr);
+        return false;
+    }
+
+    stream_set_timeout($socket, 15);
+    $from = mx_mail_from_address();
+    $fromName = mx_mail_from_name();
+    $serverName = parse_url(mx_site_url(), PHP_URL_HOST) ?: 'myexpress.com.tr';
+
+    try {
+        mx_smtp_expect($socket, [220], 'greeting');
+        mx_smtp_command($socket, 'EHLO ' . $serverName, [250], 'ehlo');
+
+        if ($secure === 'tls') {
+            mx_smtp_command($socket, 'STARTTLS', [220], 'starttls');
+            if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                throw new RuntimeException('starttls crypto failed');
+            }
+            mx_smtp_command($socket, 'EHLO ' . $serverName, [250], 'ehlo tls');
+        }
+
+        mx_smtp_command($socket, 'AUTH LOGIN', [334], 'auth login');
+        mx_smtp_command($socket, base64_encode($user), [334], 'auth username');
+        mx_smtp_command($socket, base64_encode($pass), [235], 'auth password');
+        mx_smtp_command($socket, 'MAIL FROM:<' . $from . '>', [250], 'mail from');
+        mx_smtp_command($socket, 'RCPT TO:<' . $to . '>', [250, 251], 'rcpt to');
+        mx_smtp_command($socket, 'DATA', [354], 'data');
+
+        $defaultHeaders = [
+            'Date: ' . date(DATE_RFC2822),
+            'From: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
+            'Reply-To: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
+            'To: <' . $to . '>',
+            'Subject: ' . mx_mail_header_encode($subject),
+            'MIME-Version: 1.0',
+            'Content-Type: text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding: 8bit',
+        ];
+        $body = str_replace(["\r\n", "\r"], "\n", $message);
+        $body = preg_replace('/^\./m', '..', $body) ?? $body;
+        $payload = implode("\r\n", array_merge($defaultHeaders, $headers)) . "\r\n\r\n" . str_replace("\n", "\r\n", $body) . "\r\n.";
+
+        mx_smtp_command($socket, $payload, [250], 'message body');
+        mx_smtp_command($socket, 'QUIT', [221, 250], 'quit');
+        fclose($socket);
+        return true;
+    } catch (Throwable $error) {
+        fclose($socket);
+        mx_log_error('smtp mail failed', $error, ['to' => $to, 'subject' => $subject, 'smtp_host' => $host, 'smtp_port' => $port]);
+        return false;
+    }
+}
+
 function mx_send_mail(string $to, string $subject, string $message, array $headers = []): bool
 {
     $to = trim($to);
     if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
     }
+
+    $config = mx_config();
+    if (!empty($config['smtp_host']) || !empty($config['smtp_user']) || !empty($config['smtp_pass'])) {
+        return mx_smtp_send_mail($to, $subject, $message, $headers);
+    }
+
     if (!function_exists('mail')) {
         error_log('[MyExpress] PHP mail fonksiyonu kapali | subject=' . $subject);
         return false;
     }
 
+    $from = mx_mail_from_address();
+    $fromName = mx_mail_from_name();
     $defaultHeaders = [
-        'From: MyExpress <info@myexpress.com.tr>',
-        'Reply-To: MyExpress <info@myexpress.com.tr>',
+        'From: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
+        'Reply-To: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
         'Content-Type: text/plain; charset=UTF-8',
     ];
     $mailHeaders = implode("\r\n", array_merge($defaultHeaders, $headers));
-    $sent = @mail($to, $subject, $message, $mailHeaders);
+    $sent = @mail($to, mx_mail_header_encode($subject), $message, $mailHeaders, '-f ' . $from);
     if (!$sent) {
         error_log('[MyExpress] mail gonderilemedi | to=' . $to . ' | subject=' . $subject);
     }

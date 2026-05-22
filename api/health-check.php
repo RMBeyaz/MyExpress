@@ -17,6 +17,10 @@ $checks = [
             'db_user' => false,
             'db_pass' => false,
             'mail_to' => false,
+            'mail_from' => false,
+            'smtp_host' => false,
+            'smtp_user' => false,
+            'smtp_pass' => false,
             'panel_user' => false,
             'panel_pass_or_hash' => false,
         ],
@@ -88,6 +92,10 @@ try {
     $checks['config']['keys']['db_user'] = !empty($config['db_user']);
     $checks['config']['keys']['db_pass'] = array_key_exists('db_pass', $config) && (string) $config['db_pass'] !== '';
     $checks['config']['keys']['mail_to'] = !empty($config['mail_to']);
+    $checks['config']['keys']['mail_from'] = !empty($config['mail_from']);
+    $checks['config']['keys']['smtp_host'] = !empty($config['smtp_host']);
+    $checks['config']['keys']['smtp_user'] = !empty($config['smtp_user']);
+    $checks['config']['keys']['smtp_pass'] = array_key_exists('smtp_pass', $config) && (string) $config['smtp_pass'] !== '';
     $checks['config']['keys']['panel_user'] = !empty($config['panel_user']);
     $checks['config']['keys']['panel_pass_or_hash'] = !empty($config['panel_pass']) || !empty($config['panel_pass_hash']);
 
