@@ -665,6 +665,48 @@ function mx_send_customer_verification_mail(string $email, string $fullName, str
     return mx_send_mail($email, 'MyExpress hesap onay kodunuz', $message);
 }
 
+function mx_customer_verification_ready(): bool
+{
+    return mx_table_exists('customers')
+        && mx_column_exists('customers', 'email_verification_code')
+        && mx_column_exists('customers', 'email_verification_token')
+        && mx_column_exists('customers', 'email_verification_expires_at');
+}
+
+function mx_refresh_customer_verification(int $customerId): bool
+{
+    if ($customerId <= 0 || !mx_customer_verification_ready()) {
+        return false;
+    }
+
+    $stmt = mx_pdo()->prepare('SELECT email, full_name, is_active FROM customers WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $customerId]);
+    $customer = $stmt->fetch();
+    if (!$customer || (int) $customer['is_active'] === 1) {
+        return false;
+    }
+
+    $code = mx_customer_verification_code();
+    $token = bin2hex(random_bytes(32));
+    mx_pdo()->prepare(
+        'UPDATE customers
+         SET email_verification_code = :code,
+             email_verification_token = :token,
+             email_verification_expires_at = DATE_ADD(NOW(), INTERVAL 30 MINUTE)
+         WHERE id = :id'
+    )->execute([
+        ':code' => $code,
+        ':token' => hash('sha256', $token),
+        ':id' => $customerId,
+    ]);
+
+    $sent = mx_send_customer_verification_mail((string) $customer['email'], (string) $customer['full_name'], $code, $token);
+    if (!$sent) {
+        error_log('[MyExpress] customer verification mail failed | customer_id=' . $customerId . ' | email=' . (string) $customer['email']);
+    }
+    return $sent;
+}
+
 function mx_request_mail_recipients(array $request): array
 {
     $emails = [];

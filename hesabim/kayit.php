@@ -41,9 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = mx_pdo();
         $verificationCode = mx_customer_verification_code();
         $verificationToken = bin2hex(random_bytes(32));
-        $hasVerifyColumns = mx_column_exists('customers', 'email_verification_code')
-            && mx_column_exists('customers', 'email_verification_token')
-            && mx_column_exists('customers', 'email_verification_expires_at');
+        $hasVerifyColumns = mx_customer_verification_ready();
         $columns = 'full_name, email, phone, tckn, password_hash, is_active';
         $values = ':full_name, :email, :phone, :tckn, :password_hash, :is_active';
         $params = [
@@ -65,7 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute($params);
 
         if ($hasVerifyColumns) {
-            mx_send_customer_verification_mail($email, $fullName, $verificationCode, $verificationToken);
+            $sent = mx_send_customer_verification_mail($email, $fullName, $verificationCode, $verificationToken);
+            if (!$sent) {
+                mx_log_error('customer register verification mail failed', new RuntimeException('verification mail send returned false'), ['email' => $email]);
+            }
             header('Location: onay.php?email=' . rawurlencode($email));
             exit;
         }
@@ -74,7 +75,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php');
         exit;
     } catch (Throwable $errorObject) {
-        $error = $errorObject instanceof PDOException ? 'Bu e-posta ile kayıtlı bir hesap olabilir.' : $errorObject->getMessage();
+        if ($errorObject instanceof PDOException && $errorObject->getCode() === '23000') {
+            try {
+                $email = mx_clean_string($_POST['email'] ?? '', 160);
+                $stmt = mx_pdo()->prepare('SELECT id, is_active FROM customers WHERE email = :email LIMIT 1');
+                $stmt->execute([':email' => $email]);
+                $existing = $stmt->fetch();
+                if ($existing && (int) $existing['is_active'] === 0 && mx_customer_verification_ready()) {
+                    if (mx_refresh_customer_verification((int) $existing['id'])) {
+                        header('Location: onay.php?email=' . rawurlencode($email) . '&resent=1');
+                        exit;
+                    }
+                    $error = 'Hesabınız için yeni onay kodu üretildi ancak mail gönderilemedi. Lütfen panelde Mail Testi ve server error_log kontrol edin.';
+                } else {
+                    $error = 'Bu e-posta ile kayıtlı aktif bir hesap var. Giriş yapmayı deneyin.';
+                }
+            } catch (Throwable $resendError) {
+                $error = 'Bu e-posta ile kayıtlı bir hesap olabilir.';
+                mx_log_error('customer duplicate verification resend failed', $resendError, ['email' => $_POST['email'] ?? '']);
+            }
+        } else {
+            $error = $errorObject->getMessage();
+        }
         mx_log_error('customer register failed', $errorObject, ['email' => $_POST['email'] ?? '']);
     }
 }
