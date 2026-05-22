@@ -867,10 +867,133 @@ function mx_request_mail_message(array $request, string $title, string $body = '
     return implode("\n", $lines);
 }
 
+function mx_money_mail_label($value): string
+{
+    $raw = trim((string) $value);
+    if ($raw === '') {
+        return 'Operasyon tarafından teyit edilecek';
+    }
+    if (preg_match('/^\d+(?:[.,]\d+)?$/', $raw)) {
+        return number_format((float) str_replace(',', '.', $raw), 0, ',', '.') . ' TL';
+    }
+    return $raw;
+}
+
+function mx_request_mail_html(array $request, string $title, string $body = ''): string
+{
+    $trackingCode = (string) ($request['tracking_code'] ?? '');
+    $statusLabel = mx_status_label((string) ($request['status'] ?? ''));
+    $pickup = (string) ($request['pickup'] ?? '');
+    $dropoff = (string) ($request['dropoff'] ?? '');
+    $price = mx_money_mail_label($request['price'] ?? '');
+    $trackingUrl = mx_request_public_url($trackingCode);
+    $safeTitle = mx_h($title);
+    $safeBody = mx_h($body);
+    $safeTrackingCode = mx_h($trackingCode);
+    $safeStatus = mx_h($statusLabel);
+    $safePickup = mx_h($pickup);
+    $safeDropoff = mx_h($dropoff);
+    $safePrice = mx_h($price);
+    $safeTrackingUrl = mx_h($trackingUrl);
+    $bodyBlock = $body !== ''
+        ? '<p style="margin:0 0 20px;color:#536372;font-size:15px;line-height:1.55;">' . nl2br($safeBody) . '</p>'
+        : '';
+
+    return <<<HTML
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{$safeTitle}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f7f9;color:#0b2238;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f9;margin:0;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #dce4ea;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 28px;background:#071d2f;color:#ffffff;">
+                <div style="font-size:22px;font-weight:800;letter-spacing:.2px;">MyExpress</div>
+                <div style="margin-top:6px;color:#b9c8d3;font-size:14px;">Talep ve teslimat durumu</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px 26px;">
+                <p style="margin:0 0 10px;color:#ef4438;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;">Gönderi bilgilendirmesi</p>
+                <h1 style="margin:0 0 14px;color:#0b2238;font-size:28px;line-height:1.16;font-weight:800;">{$safeTitle}</h1>
+                {$bodyBlock}
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;border:1px solid #e1e8ee;border-radius:12px;overflow:hidden;">
+                  <tr>
+                    <td style="padding:16px 18px;background:#f8fafc;border-bottom:1px solid #e1e8ee;">
+                      <div style="color:#6b7785;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;">Talep no</div>
+                      <div style="margin-top:4px;color:#0b2238;font-size:22px;font-weight:900;">{$safeTrackingCode}</div>
+                    </td>
+                    <td style="padding:16px 18px;background:#f8fafc;border-bottom:1px solid #e1e8ee;text-align:right;">
+                      <span style="display:inline-block;padding:8px 12px;background:#eaf3ff;color:#174a7a;border-radius:999px;font-size:13px;font-weight:800;">{$safeStatus}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="padding:18px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td style="padding:0 0 14px;">
+                            <div style="color:#6b7785;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;">Alım</div>
+                            <div style="margin-top:5px;color:#0b2238;font-size:15px;line-height:1.45;font-weight:700;">{$safePickup}</div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding:0 0 14px;">
+                            <div style="color:#6b7785;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;">Teslim</div>
+                            <div style="margin-top:5px;color:#0b2238;font-size:15px;line-height:1.45;font-weight:700;">{$safeDropoff}</div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div style="color:#6b7785;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;">Ücret</div>
+                            <div style="margin-top:5px;color:#0b2238;font-size:18px;font-weight:900;">{$safePrice}</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 20px;">
+                  <tr>
+                    <td style="background:#ef4438;border-radius:8px;">
+                      <a href="{$safeTrackingUrl}" style="display:inline-block;padding:14px 20px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:800;">Gönderi Durumunu Takip Et</a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0;color:#536372;font-size:13px;line-height:1.5;">Buton çalışmazsa bu bağlantıyı kullanabilirsiniz:<br><a href="{$safeTrackingUrl}" style="color:#0b2238;word-break:break-all;">{$safeTrackingUrl}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e4ebf0;color:#6b7785;font-size:13px;line-height:1.5;">
+                Bu bilgilendirme MyExpress talep sistemindeki kayıtlı gönderi bilgileriniz için otomatik oluşturulmuştur.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+HTML;
+}
+
 function mx_send_request_customer_mail(array $request, string $subject, string $title, string $body = ''): void
 {
     foreach (mx_request_mail_recipients($request) as $email) {
-        mx_send_mail($email, $subject, mx_request_mail_message($request, $title, $body));
+        mx_send_html_mail(
+            $email,
+            $subject,
+            mx_request_mail_message($request, $title, $body),
+            mx_request_mail_html($request, $title, $body)
+        );
     }
 }
 
