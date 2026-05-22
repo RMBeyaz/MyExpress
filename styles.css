@@ -1761,6 +1761,37 @@ h3 {
   font-weight: 800;
 }
 
+.panel-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.panel-summary-grid article {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.panel-summary-grid span,
+.panel-summary-grid strong {
+  display: block;
+}
+
+.panel-summary-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.panel-summary-grid strong {
+  margin-top: 6px;
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 900;
+}
+
 .panel-table-wrap {
   overflow-x: auto;
 }

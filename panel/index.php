@@ -319,6 +319,9 @@ if (mx_panel_is_logged_in()) {
           <?php if (mx_panel_can_manage_pricing()): ?>
             <a class="btn btn-secondary" href="fiyatlandirma.php">Fiyatlandırma</a>
           <?php endif; ?>
+            <?php if (mx_panel_is_admin()): ?>
+              <a class="btn btn-secondary" href="mail-test.php">Mail Testi</a>
+            <?php endif; ?>
             <?php if (mx_panel_can_manage_users()): ?>
               <a class="btn btn-secondary" href="kullanicilar.php">Kullanıcılar</a>
             <?php endif; ?>

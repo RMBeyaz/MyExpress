@@ -510,7 +510,9 @@ function mx_smtp_expect($socket, array $codes, string $context): string
     $response = mx_smtp_read_response($socket);
     $code = (int) substr($response, 0, 3);
     if (!in_array($code, $codes, true)) {
-        throw new RuntimeException($context . ' failed with SMTP code ' . ($code ?: 'unknown'));
+        $safeResponse = preg_replace('/\s+/', ' ', trim($response)) ?? '';
+        $safeResponse = function_exists('mb_substr') ? mb_substr($safeResponse, 0, 180, 'UTF-8') : substr($safeResponse, 0, 180);
+        throw new RuntimeException($context . ' failed with SMTP code ' . ($code ?: 'unknown') . ($safeResponse !== '' ? ' response=' . $safeResponse : ''));
     }
 
     return $response;
