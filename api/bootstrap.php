@@ -492,6 +492,34 @@ function mx_mail_header_encode(string $value): string
     return '=?UTF-8?B?' . base64_encode($value) . '?=';
 }
 
+function mx_mail_headers_have(array $headers, string $name): bool
+{
+    $prefix = strtolower($name) . ':';
+    foreach ($headers as $header) {
+        if (str_starts_with(strtolower(trim((string) $header)), $prefix)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function mx_mail_content_headers(array $headers): array
+{
+    $contentHeaders = [];
+    if (!mx_mail_headers_have($headers, 'MIME-Version')) {
+        $contentHeaders[] = 'MIME-Version: 1.0';
+    }
+    if (!mx_mail_headers_have($headers, 'Content-Type')) {
+        $contentHeaders[] = 'Content-Type: text/plain; charset=UTF-8';
+    }
+    if (!mx_mail_headers_have($headers, 'Content-Type') && !mx_mail_headers_have($headers, 'Content-Transfer-Encoding')) {
+        $contentHeaders[] = 'Content-Transfer-Encoding: 8bit';
+    }
+
+    return $contentHeaders;
+}
+
 function mx_smtp_read_response($socket): string
 {
     $response = '';
@@ -583,10 +611,8 @@ function mx_smtp_send_mail(string $to, string $subject, string $message, array $
             'Reply-To: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
             'To: <' . $to . '>',
             'Subject: ' . mx_mail_header_encode($subject),
-            'MIME-Version: 1.0',
-            'Content-Type: text/plain; charset=UTF-8',
-            'Content-Transfer-Encoding: 8bit',
         ];
+        $defaultHeaders = array_merge($defaultHeaders, mx_mail_content_headers($headers));
         $body = str_replace(["\r\n", "\r"], "\n", $message);
         $body = preg_replace('/^\./m', '..', $body) ?? $body;
         $payload = implode("\r\n", array_merge($defaultHeaders, $headers)) . "\r\n\r\n" . str_replace("\n", "\r\n", $body) . "\r\n.";
@@ -624,14 +650,37 @@ function mx_send_mail(string $to, string $subject, string $message, array $heade
     $defaultHeaders = [
         'From: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
         'Reply-To: ' . mx_mail_header_encode($fromName) . ' <' . $from . '>',
-        'Content-Type: text/plain; charset=UTF-8',
     ];
+    $defaultHeaders = array_merge($defaultHeaders, mx_mail_content_headers($headers));
     $mailHeaders = implode("\r\n", array_merge($defaultHeaders, $headers));
     $sent = @mail($to, mx_mail_header_encode($subject), $message, $mailHeaders, '-f ' . $from);
     if (!$sent) {
         error_log('[MyExpress] mail gonderilemedi | to=' . $to . ' | subject=' . $subject);
     }
     return $sent;
+}
+
+function mx_send_html_mail(string $to, string $subject, string $textBody, string $htmlBody): bool
+{
+    $boundary = 'mx_' . bin2hex(random_bytes(16));
+    $body = implode("\r\n", [
+        '--' . $boundary,
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        str_replace(["\r\n", "\r"], "\n", $textBody),
+        '--' . $boundary,
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        str_replace(["\r\n", "\r"], "\n", $htmlBody),
+        '--' . $boundary . '--',
+        '',
+    ]);
+
+    return mx_send_mail($to, $subject, $body, [
+        'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
+    ]);
 }
 
 function mx_request_public_url(string $trackingCode): string
@@ -647,7 +696,7 @@ function mx_customer_verification_code(): string
 function mx_send_customer_verification_mail(string $email, string $fullName, string $code, string $token): bool
 {
     $verifyUrl = mx_site_url('hesabim/onay.php?token=' . rawurlencode($token));
-    $message = implode("\n", [
+    $textMessage = implode("\n", [
         'Merhaba ' . $fullName . ',',
         '',
         'MyExpress hesabınızı aktifleştirmek için aşağıdaki onay kodunu kullanın:',
@@ -661,8 +710,69 @@ function mx_send_customer_verification_mail(string $email, string $fullName, str
         '',
         'MyExpress',
     ]);
+    $safeName = mx_h($fullName);
+    $safeCode = mx_h($code);
+    $safeVerifyUrl = mx_h($verifyUrl);
+    $htmlMessage = <<<HTML
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MyExpress hesap onayı</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f7f9;color:#0b2238;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f9;margin:0;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #dce4ea;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 28px;background:#071d2f;color:#ffffff;">
+                <div style="font-size:22px;font-weight:800;letter-spacing:.2px;">MyExpress</div>
+                <div style="margin-top:6px;color:#b9c8d3;font-size:14px;">İstanbul içi kurye ve teslimat operasyonu</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px 26px;">
+                <p style="margin:0 0 10px;color:#ef4438;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;">Hesap onayı</p>
+                <h1 style="margin:0 0 14px;color:#0b2238;font-size:28px;line-height:1.16;font-weight:800;">Hesabınızı aktifleştirin</h1>
+                <p style="margin:0 0 22px;color:#536372;font-size:16px;line-height:1.55;">Merhaba {$safeName}, MyExpress hesabınızı güvenli şekilde kullanabilmeniz için aşağıdaki onay kodunu girmeniz yeterli.</p>
 
-    return mx_send_mail($email, 'MyExpress hesap onay kodunuz', $message);
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;background:#fff2f0;border:1px solid #ffc7c1;border-radius:12px;">
+                  <tr>
+                    <td style="padding:20px 18px;text-align:center;">
+                      <div style="margin-bottom:8px;color:#6b7785;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;">Onay kodunuz</div>
+                      <div style="font-size:38px;line-height:1;font-weight:900;letter-spacing:8px;color:#0b2238;">{$safeCode}</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 22px;">
+                  <tr>
+                    <td style="background:#ef4438;border-radius:8px;">
+                      <a href="{$safeVerifyUrl}" style="display:inline-block;padding:14px 20px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:800;">Hesabı Aktifleştir</a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 12px;color:#536372;font-size:14px;line-height:1.5;">Buton çalışmazsa aşağıdaki bağlantıyı tarayıcınıza yapıştırabilirsiniz:</p>
+                <p style="margin:0;word-break:break-all;color:#0b2238;font-size:13px;line-height:1.5;"><a href="{$safeVerifyUrl}" style="color:#0b2238;">{$safeVerifyUrl}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e4ebf0;color:#6b7785;font-size:13px;line-height:1.5;">
+                Bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayın. Kod güvenlik için kısa süreli geçerlidir.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+HTML;
+
+    return mx_send_html_mail($email, 'MyExpress hesap onay kodunuz', $textMessage, $htmlMessage);
 }
 
 function mx_customer_verification_ready(): bool

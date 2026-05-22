@@ -25,8 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             '',
             'Bu mesaj geldiyse mail gönderim altyapısı çalışıyor demektir.',
         ]);
+        $htmlBody = '<div style="margin:0;padding:24px;background:#f4f7f9;font-family:Arial,Helvetica,sans-serif;color:#0b2238;">'
+            . '<div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #dce4ea;border-radius:14px;overflow:hidden;">'
+            . '<div style="padding:22px 24px;background:#071d2f;color:#fff;font-size:22px;font-weight:800;">MyExpress</div>'
+            . '<div style="padding:26px 24px;">'
+            . '<p style="margin:0 0 8px;color:#ef4438;font-size:13px;font-weight:800;text-transform:uppercase;">SMTP testi</p>'
+            . '<h1 style="margin:0 0 12px;font-size:26px;line-height:1.2;">Mail altyapısı çalışıyor</h1>'
+            . '<p style="margin:0 0 12px;color:#536372;font-size:15px;line-height:1.55;">Bu e-posta MyExpress panelinden gönderilen HTML test mesajıdır.</p>'
+            . '<p style="margin:0;color:#536372;font-size:14px;line-height:1.55;">Tarih: ' . mx_h(date('Y-m-d H:i:s')) . '<br>Gönderen kullanıcı: ' . mx_h(mx_panel_user()) . '</p>'
+            . '</div></div></div>';
 
-        if (!mx_send_mail($to, $subject, $body)) {
+        if (!mx_send_html_mail($to, $subject, $body, $htmlBody)) {
             throw new RuntimeException('Mail fonksiyonu başarısız döndü. Detay için server error_log kontrol edilmeli.');
         }
 
