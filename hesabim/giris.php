@@ -17,9 +17,12 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = mx_clean_string($_POST['email'] ?? '', 160);
     $password = (string) ($_POST['password'] ?? '');
+    $loginLimit = mx_login_rate_limit_status('customer', $email);
 
     if ($email === '' || $password === '') {
         $error = 'E-posta ve şifre girin.';
+    } elseif (!$loginLimit['allowed']) {
+        $error = mx_login_block_message((int) $loginLimit['retry_after']);
     } elseif (mx_customer_login($email, $password)) {
         header('Location: index.php');
         exit;

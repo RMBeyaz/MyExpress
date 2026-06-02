@@ -239,8 +239,151 @@ function mx_role_label(string $role): string
     return $roles[$role] ?? $role;
 }
 
+function mx_client_ip(): string
+{
+    $candidate = (string) ($_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '');
+    if (str_contains($candidate, ',')) {
+        $candidate = trim(explode(',', $candidate)[0]);
+    }
+
+    return mx_clean_string($candidate, 45);
+}
+
+function mx_login_attempts_table_ready(): bool
+{
+    static $ready = null;
+
+    if ($ready !== null) {
+        return $ready;
+    }
+
+    try {
+        if (mx_table_exists('login_attempts')) {
+            $ready = true;
+            return true;
+        }
+
+        mx_pdo()->exec(
+            "CREATE TABLE IF NOT EXISTS login_attempts (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                scope VARCHAR(32) NOT NULL,
+                identifier_hash CHAR(64) NOT NULL,
+                ip_address VARCHAR(45) NOT NULL,
+                success TINYINT(1) NOT NULL DEFAULT 0,
+                user_agent VARCHAR(255) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                INDEX idx_scope_identifier_time (scope, identifier_hash, created_at),
+                INDEX idx_scope_ip_time (scope, ip_address, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $ready = true;
+    } catch (Throwable $error) {
+        $ready = false;
+        mx_log_error('login attempts table unavailable', $error);
+    }
+
+    return $ready;
+}
+
+function mx_login_rate_limit_status(string $scope, string $identifier): array
+{
+    $config = mx_config();
+    $maxAttempts = max(3, (int) ($config['login_max_attempts'] ?? 6));
+    $windowSeconds = max(60, (int) ($config['login_window_seconds'] ?? 900));
+    $scope = mx_clean_string($scope, 32);
+    $identifierHash = hash('sha256', strtolower(mx_clean_string($identifier, 180)));
+    $ip = mx_client_ip();
+
+    if (!mx_login_attempts_table_ready()) {
+        return ['allowed' => true, 'remaining' => $maxAttempts, 'retry_after' => 0];
+    }
+
+    try {
+        $pdo = mx_pdo();
+        $pdo->prepare('DELETE FROM login_attempts WHERE created_at < DATE_SUB(NOW(), INTERVAL 2 DAY)')->execute();
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*) AS attempts, MIN(created_at) AS first_attempt
+             FROM login_attempts
+             WHERE scope = :scope
+               AND success = 0
+               AND created_at >= DATE_SUB(NOW(), INTERVAL {$windowSeconds} SECOND)
+               AND (identifier_hash = :identifier_hash OR ip_address = :ip_address)"
+        );
+        $stmt->bindValue(':scope', $scope);
+        $stmt->bindValue(':identifier_hash', $identifierHash);
+        $stmt->bindValue(':ip_address', $ip);
+        $stmt->execute();
+        $row = $stmt->fetch() ?: ['attempts' => 0, 'first_attempt' => null];
+        $attempts = (int) ($row['attempts'] ?? 0);
+        $remaining = max(0, $maxAttempts - $attempts);
+
+        if ($attempts >= $maxAttempts) {
+            $first = strtotime((string) ($row['first_attempt'] ?? 'now')) ?: time();
+            $retryAfter = max(60, ($first + $windowSeconds) - time());
+            return ['allowed' => false, 'remaining' => 0, 'retry_after' => $retryAfter];
+        }
+
+        return ['allowed' => true, 'remaining' => $remaining, 'retry_after' => 0];
+    } catch (Throwable $error) {
+        mx_log_error('login rate limit check failed', $error, ['scope' => $scope]);
+        return ['allowed' => true, 'remaining' => $maxAttempts, 'retry_after' => 0];
+    }
+}
+
+function mx_record_login_attempt(string $scope, string $identifier, bool $success): void
+{
+    if (!mx_login_attempts_table_ready()) {
+        return;
+    }
+
+    try {
+        $scope = mx_clean_string($scope, 32);
+        $identifierHash = hash('sha256', strtolower(mx_clean_string($identifier, 180)));
+        $ip = mx_client_ip();
+        $pdo = mx_pdo();
+        $stmt = $pdo->prepare(
+            'INSERT INTO login_attempts (scope, identifier_hash, ip_address, success, user_agent)
+             VALUES (:scope, :identifier_hash, :ip_address, :success, :user_agent)'
+        );
+        $stmt->execute([
+            ':scope' => $scope,
+            ':identifier_hash' => $identifierHash,
+            ':ip_address' => $ip,
+            ':success' => $success ? 1 : 0,
+            ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
+        ]);
+
+        if ($success) {
+            $cleanup = $pdo->prepare(
+                'DELETE FROM login_attempts WHERE scope = :scope AND (identifier_hash = :identifier_hash OR ip_address = :ip_address)'
+            );
+            $cleanup->execute([
+                ':scope' => $scope,
+                ':identifier_hash' => $identifierHash,
+                ':ip_address' => $ip,
+            ]);
+        }
+    } catch (Throwable $error) {
+        mx_log_error('login rate limit record failed', $error, ['scope' => $scope]);
+    }
+}
+
+function mx_login_block_message(int $retryAfter): string
+{
+    $minutes = max(1, (int) ceil($retryAfter / 60));
+    return 'Çok fazla hatalı giriş denemesi yapıldı. Lütfen yaklaşık ' . $minutes . ' dakika sonra tekrar deneyin.';
+}
+
 function mx_panel_login(string $username, string $password): bool
 {
+    $rateLimit = mx_login_rate_limit_status('panel', $username);
+    if (!$rateLimit['allowed']) {
+        return false;
+    }
+
+    $success = false;
     try {
         if (mx_table_exists('panel_users')) {
             $stmt = mx_pdo()->prepare('SELECT id, username, full_name, role, password_hash, is_active FROM panel_users WHERE username = :username LIMIT 1');
@@ -257,6 +400,8 @@ function mx_panel_login(string $username, string $password): bool
 
                 mx_pdo()->prepare('UPDATE panel_users SET last_login_at = NOW() WHERE id = :id')->execute([':id' => (int) $user['id']]);
                 mx_audit_log(null, 'login', 'Panel girisi yapildi.');
+                $success = true;
+                mx_record_login_attempt('panel', $username, true);
                 return true;
             }
         }
@@ -281,7 +426,14 @@ function mx_panel_login(string $username, string $password): bool
         $_SESSION['mx_panel_role'] = 'admin';
         $_SESSION['mx_panel_last_activity'] = time();
         mx_audit_log(null, 'login', 'Config admin ile panel girisi yapildi.');
+        $success = true;
+        mx_record_login_attempt('panel', $username, true);
         return true;
+    }
+
+    if (!$success) {
+        mx_record_login_attempt('panel', $username, false);
+        usleep(250000);
     }
 
     return false;
@@ -316,6 +468,11 @@ function mx_panel_require_login()
 
 function mx_customer_login(string $email, string $password): bool
 {
+    $rateLimit = mx_login_rate_limit_status('customer', $email);
+    if (!$rateLimit['allowed']) {
+        return false;
+    }
+
     try {
         if (!mx_table_exists('customers')) {
             return false;
@@ -333,6 +490,8 @@ function mx_customer_login(string $email, string $password): bool
         $customer = $stmt->fetch();
 
         if (!$customer || (int) $customer['is_active'] !== 1 || !password_verify($password, (string) $customer['password_hash'])) {
+            mx_record_login_attempt('customer', $email, false);
+            usleep(250000);
             return false;
         }
 
@@ -349,6 +508,7 @@ function mx_customer_login(string $email, string $password): bool
             ':id' => (int) $customer['id'],
         ]);
 
+        mx_record_login_attempt('customer', $email, true);
         return true;
     } catch (Throwable $error) {
         mx_log_error('customer login failed', $error, ['email' => $email]);

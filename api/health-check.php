@@ -63,6 +63,7 @@ $checks = [
         'customers' => false,
         'customer_addresses' => false,
         'customer_invoices' => false,
+        'login_attempts' => false,
     ],
     'columns' => [
         'courier_requests.customer_id' => false,

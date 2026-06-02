@@ -48,12 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && mx_panel_is_logged_in() && ($_POST[
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !mx_panel_is_logged_in()) {
     $user = trim((string) ($_POST['username'] ?? ''));
     $pass = (string) ($_POST['password'] ?? '');
-    if (mx_panel_login($user, $pass)) {
+    $loginLimit = mx_login_rate_limit_status('panel', $user);
+    if (!$loginLimit['allowed']) {
+        $error = mx_login_block_message((int) $loginLimit['retry_after']);
+    } elseif (mx_panel_login($user, $pass)) {
         header('Location: index.php');
         exit;
+    } else {
+        $error = 'Kullanici adi veya sifre hatali.';
     }
-
-    $error = 'Kullanici adi veya sifre hatali.';
 }
 
 $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) || !empty($config['panel_pass']));
