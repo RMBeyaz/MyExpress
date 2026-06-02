@@ -823,6 +823,7 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px;
   color: var(--muted);
@@ -834,6 +835,14 @@ h3 {
 .price-estimate strong {
   color: var(--navy);
   white-space: nowrap;
+}
+
+.price-estimate small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
 }
 
 .fee-summary {
@@ -2805,6 +2814,56 @@ h3 {
   .whatsapp-contact svg {
     width: 20px;
     height: 20px;
+  }
+
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .hero > *,
+  .quote-panel,
+  .delivery-form,
+  .delivery-form label,
+  .autocomplete-field,
+  .price-estimate {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .quote-panel {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .price-estimate {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    justify-content: start;
+    gap: 5px;
+  }
+
+  .price-estimate strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .delivery-form input,
+  .delivery-form select,
+  .delivery-form textarea,
+  .delivery-form button,
+  .btn,
+  .btn-full {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .btn,
+  .btn-full {
+    white-space: normal;
   }
 
   .corporate-cta {
