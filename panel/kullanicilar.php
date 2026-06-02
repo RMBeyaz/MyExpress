@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 mx_panel_require_user_manager();
 
 $pdo = mx_pdo();
@@ -312,6 +315,7 @@ if (mx_table_exists('couriers')) {
 
       <section class="panel-user-stack">
         <form class="panel-card user-create-card" method="post">
+    <?= mx_csrf_field() ?>
           <h2>Yeni Kullanıcı</h2>
           <input type="hidden" name="action" value="create">
           <div class="panel-edit-grid panel-edit-grid-compact">
@@ -334,6 +338,7 @@ if (mx_table_exists('couriers')) {
 
       <section class="panel-user-stack courier-management-grid">
         <form class="panel-card user-create-card courier-create-card" method="post">
+    <?= mx_csrf_field() ?>
           <h2>Yeni Kurye</h2>
           <input type="hidden" name="action" value="create_courier">
           <div class="panel-edit-grid panel-edit-grid-compact">
@@ -392,6 +397,7 @@ if (mx_table_exists('couriers')) {
                         </form>
                         <a class="panel-icon-btn" href="kurye-hareketleri.php?id=<?= (int) $courier['id'] ?>" aria-label="Kurye işlem geçmişi"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M13 3a9 9 0 1 0 8.95 10h-2A7 7 0 1 1 13 5v4l5-5-5-5v4Zm-1 5h2v5l4 2-.9 1.8-5.1-2.55V8Z"/></svg></a>
                         <form method="post" onsubmit="return confirm('Bu kurye silinsin mi?');">
+    <?= mx_csrf_field() ?>
                           <input type="hidden" name="action" value="delete_courier">
                           <input type="hidden" name="id" value="<?= (int) $courier['id'] ?>">
                           <button class="panel-icon-btn danger" type="submit" aria-label="Kuryeyi sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>
@@ -454,6 +460,7 @@ if (mx_table_exists('couriers')) {
                       </form>
                       <a class="panel-icon-btn" href="kullanici-hareketleri.php?id=<?= (int) $user['id'] ?>" aria-label="Kullanıcı işlem geçmişi"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M13 3a9 9 0 1 0 8.95 10h-2A7 7 0 1 1 13 5v4l5-5-5-5v4Zm-1 5h2v5l4 2-.9 1.8-5.1-2.55V8Z"/></svg></a>
                       <form method="post" onsubmit="return confirm('Bu kullanıcı silinsin mi?');">
+    <?= mx_csrf_field() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
                         <button class="panel-icon-btn danger" type="submit" aria-label="Kullanıcıyı sil"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button>

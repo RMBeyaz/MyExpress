@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 require __DIR__ . '/_layout.php';
 
 if (mx_customer_is_logged_in()) {
@@ -110,6 +113,7 @@ mx_account_header('Üye Ol', 'login');
     <p>Adreslerinizi kaydedin, kurye taleplerinizi hesabınızla ilişkilendirin ve geçmiş gönderilerinizi tek yerden görüntüleyin.</p>
   </div>
   <form class="account-card account-form" method="post">
+    <?= mx_csrf_field() ?>
     <h2>Hesap oluştur</h2>
     <?php mx_account_flash($message, $error); ?>
     <label>Ad soyad<input name="full_name" required autocomplete="name"></label>

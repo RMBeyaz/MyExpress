@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 require __DIR__ . '/_layout.php';
 
 if (mx_customer_is_logged_in()) {
@@ -34,6 +37,7 @@ mx_account_header('Müşteri Girişi', 'login');
     <p>Kayıtlı adreslerinizle daha hızlı talep oluşturabilir, geçmiş gönderilerinizi ve faturalarınızı tek ekrandan takip edebilirsiniz.</p>
   </div>
   <form class="account-card account-form" method="post">
+    <?= mx_csrf_field() ?>
     <h2>Giriş yap</h2>
     <?php mx_account_flash('', $error); ?>
     <label>E-posta<input type="email" name="email" required autocomplete="email"></label>

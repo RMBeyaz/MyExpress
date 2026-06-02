@@ -2,6 +2,24 @@
 declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
+mx_secure_session_start();
+
+try {
+    $healthConfig = mx_config();
+    $healthToken = trim((string) ($healthConfig['health_check_token'] ?? ''));
+    $requestToken = trim((string) ($_GET['token'] ?? ''));
+    $tokenOk = $healthToken !== '' && $requestToken !== '' && hash_equals($healthToken, $requestToken);
+
+    if (!$tokenOk && !mx_panel_is_logged_in()) {
+        mx_json([
+            'ok' => false,
+            'message' => 'Health-check erişimi için panel oturumu veya geçerli token gerekir.',
+        ], 403);
+    }
+} catch (Throwable $authError) {
+    mx_log_error('health-check auth failed', $authError);
+    mx_json(['ok' => false, 'message' => 'Health-check erişimi doğrulanamadı.'], 403);
+}
 
 $checks = [
     'ok' => true,

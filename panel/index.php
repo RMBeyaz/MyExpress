@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 
 $error = '';
 $config = [];
@@ -332,6 +335,7 @@ if (mx_panel_is_logged_in()) {
 
       <?php if (!mx_panel_is_logged_in()): ?>
         <form class="panel-login" method="post">
+    <?= mx_csrf_field() ?>
           <h2>Panel Girişi</h2>
           <?php if (!$isReady): ?>
             <p class="panel-alert">Config dosyasına <code>panel_user</code> ve <code>panel_pass</code> eklenmeden giriş açılamaz.</p>
@@ -452,6 +456,7 @@ if (mx_panel_is_logged_in()) {
         </section>
         <div class="panel-modal" data-delete-modal hidden>
           <form class="panel-modal-card" method="post">
+    <?= mx_csrf_field() ?>
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="id" data-delete-id>
             <h2>Talebi Sil</h2>

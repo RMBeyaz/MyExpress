@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/bootstrap.php';
+mx_secure_session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     mx_json(['ok' => false, 'message' => 'Bu endpoint sadece POST kabul eder.'], 405);

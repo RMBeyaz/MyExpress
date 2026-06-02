@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 mx_panel_require_login();
 
 $pdo = mx_pdo();
@@ -207,6 +210,7 @@ if (mx_table_exists('customers')) {
       <?php if ($error !== ''): ?><p class="panel-alert"><?= mx_h($error) ?></p><?php endif; ?>
 
       <form class="panel-card manual-request-form" method="post">
+    <?= mx_csrf_field() ?>
         <div class="panel-card-heading">
           <h2>Talep Bilgileri</h2>
           <span>Operasyon panelinden hızlı kayıt</span>

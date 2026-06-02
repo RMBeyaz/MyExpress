@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 mx_panel_require_pricing_manager();
 
 $pdo = mx_pdo();
@@ -91,6 +94,7 @@ foreach ($rows as $row) {
       </section>
 
       <form class="panel-card pricing-panel" method="post">
+    <?= mx_csrf_field() ?>
         <div class="panel-card-heading">
           <div>
             <h2>Fiyat Kuralları</h2>

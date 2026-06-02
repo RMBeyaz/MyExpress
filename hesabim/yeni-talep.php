@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 require __DIR__ . '/_layout.php';
 mx_customer_require_login();
 
@@ -53,6 +56,7 @@ mx_account_header('Yeni Talep', 'new-request');
 <?php mx_account_flash('', $error); ?>
 <section class="account-card">
   <form class="account-form" method="post">
+    <?= mx_csrf_field() ?>
     <?php if (count($addresses) < 2): ?>
       <p class="account-empty">Bu ekranı kullanmak için en az iki kayıtlı adres gerekir. Dilerseniz yine de <a href="../talep.html">normal talep formundan</a> talep oluşturabilirsiniz.</p>
     <?php endif; ?>

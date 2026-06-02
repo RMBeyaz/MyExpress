@@ -27,5 +27,6 @@ deployment:
     - /bin/cp yasakli-gonderiler.html $DEPLOYPATH
     - /bin/cp robots.txt $DEPLOYPATH
     - /bin/cp sitemap.xml $DEPLOYPATH
+    - /bin/cp .htaccess $DEPLOYPATH
     - /bin/cp script.js $DEPLOYPATH
     - /bin/cp styles.css $DEPLOYPATH

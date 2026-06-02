@@ -6,6 +6,58 @@ const MYEXPRESS_CONFIG_PATH = '/home/myexpresscom/myexpress-config.php';
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+function mx_is_https_request(): bool
+{
+    if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+        return true;
+    }
+
+    return strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+}
+
+function mx_security_headers(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()');
+    if (mx_is_https_request()) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
+}
+
+function mx_secure_session_start(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        mx_security_headers();
+        return;
+    }
+
+    $secure = mx_is_https_request();
+    session_name('mx_session');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    if ($secure) {
+        ini_set('session.cookie_secure', '1');
+    }
+
+    session_start();
+    mx_security_headers();
+}
+
 function mx_log_error(string $context, Throwable $error, array $extra = [])
 {
     $safeExtra = $extra;
@@ -24,6 +76,49 @@ function mx_log_error(string $context, Throwable $error, array $extra = [])
         json_encode($safeExtra, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         $error->getTraceAsString()
     ));
+}
+
+function mx_csrf_token(): string
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        mx_secure_session_start();
+    }
+
+    if (empty($_SESSION['mx_csrf_token']) || !is_string($_SESSION['mx_csrf_token'])) {
+        $_SESSION['mx_csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return (string) $_SESSION['mx_csrf_token'];
+}
+
+function mx_csrf_field(): string
+{
+    return '<input type="hidden" name="csrf_token" value="' . mx_h(mx_csrf_token()) . '">';
+}
+
+function mx_csrf_valid(?string $token = null): bool
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        mx_secure_session_start();
+    }
+
+    $expected = (string) ($_SESSION['mx_csrf_token'] ?? '');
+    $given = (string) ($token ?? ($_POST['csrf_token'] ?? ''));
+
+    return $expected !== '' && $given !== '' && hash_equals($expected, $given);
+}
+
+function mx_require_csrf(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+
+    if (!mx_csrf_valid()) {
+        http_response_code(403);
+        echo 'Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.';
+        exit;
+    }
 }
 
 function mx_config(): array

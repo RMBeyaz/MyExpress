@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/bootstrap.php';
+mx_secure_session_start();
 
 if (!mx_customer_is_logged_in()) {
     mx_json(['ok' => true, 'loggedIn' => false]);

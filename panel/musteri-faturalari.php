@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 mx_panel_require_user_manager();
 
 $pdo = mx_pdo();
@@ -78,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!move_uploaded_file((string) $file['tmp_name'], $targetPath)) {
                 throw new RuntimeException('PDF dosyası kaydedilemedi.');
             }
+            @chmod($targetPath, 0600);
             $filePath = 'uploads/faturalar/' . (int) $customer['id'] . '/' . $safeName;
             $title = $originalFileName !== '' ? $originalFileName : 'MyExpress fatura PDF';
 
@@ -185,6 +189,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
 
       <section class="panel-detail-grid">
         <form class="panel-card user-create-card" method="post" enctype="multipart/form-data">
+    <?= mx_csrf_field() ?>
           <h2>PDF Fatura Yükle</h2>
           <input type="hidden" name="action" value="create_invoice">
           <input type="hidden" name="customer_id" value="<?= (int) $customer['id'] ?>">
@@ -249,6 +254,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
                   <td><a href="fatura-indir.php?id=<?= (int) $invoice['id'] ?>" target="_blank" rel="noopener">Aç</a></td>
                   <td>
                     <form method="post" onsubmit="return confirm('Bu fatura tanımı silinsin mi?');">
+    <?= mx_csrf_field() ?>
                       <input type="hidden" name="action" value="delete_invoice">
                       <input type="hidden" name="customer_id" value="<?= (int) $customer['id'] ?>">
                       <input type="hidden" name="invoice_id" value="<?= (int) $invoice['id'] ?>">

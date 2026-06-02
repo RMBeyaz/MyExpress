@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 require __DIR__ . '/_layout.php';
 mx_customer_require_login();
 
@@ -113,6 +116,7 @@ mx_account_header('Adreslerim', 'addresses');
 <?php mx_account_flash($message, $error); ?>
 <section class="account-grid-2">
   <form class="account-card account-form" method="post" data-account-address-form<?= $editAddress ? ' data-confirm-update="true"' : '' ?>>
+    <?= mx_csrf_field() ?>
     <h2><?= $editAddress ? 'Adresi düzenle' : 'Yeni adres' ?></h2>
     <input type="hidden" name="action" value="<?= $editAddress ? 'update' : 'create' ?>">
     <input type="hidden" name="id" value="<?= $editAddress ? (int) $editAddress['id'] : 0 ?>">
@@ -151,6 +155,7 @@ mx_account_header('Adreslerim', 'addresses');
           <div class="account-row-actions">
             <a class="panel-icon-btn" href="adresler.php?edit=<?= (int) $address['id'] ?>" aria-label="Adresi düzenle">✎</a>
             <form method="post" onsubmit="return confirm('Bu adres silinsin mi?');">
+    <?= mx_csrf_field() ?>
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="id" value="<?= (int) $address['id'] ?>">
               <button class="panel-icon-btn" type="submit" aria-label="Adresi sil">🗑</button>

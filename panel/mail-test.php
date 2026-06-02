@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
 require __DIR__ . '/../api/bootstrap.php';
+mx_secure_session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    mx_require_csrf();
+}
 mx_panel_require_admin();
 
 $config = mx_config();
@@ -94,6 +97,7 @@ $smtpChecks = [
       </section>
 
       <form class="panel-card user-create-card" method="post">
+    <?= mx_csrf_field() ?>
         <div class="panel-card-heading">
           <div>
             <h2>Test maili gönder</h2>

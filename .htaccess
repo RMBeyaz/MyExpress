@@ -1,0 +1,17 @@
+Options -Indexes
+
+<IfModule mod_headers.c>
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+  Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+<FilesMatch "^(\.cpanel\.yml|database\.sql|README.*|composer\.(json|lock)|package(-lock)?\.json|.*\.log)$">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(env|ini|bak|backup|old|orig|swp|sql)$">
+  Require all denied
+</FilesMatch>
