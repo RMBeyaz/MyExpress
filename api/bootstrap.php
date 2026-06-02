@@ -216,12 +216,12 @@ function mx_valid_tckn(string $value): bool
 
 function mx_tracking_code(): string
 {
-    return 'MX' . date('ymd') . strtoupper(bin2hex(random_bytes(3)));
+    return 'MX' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
 }
 
 function mx_tracking_code_for_id(int $id): string
 {
-    return sprintf('MX%s-%05d', date('ymd'), $id);
+    return mx_tracking_code();
 }
 
 function mx_roles(): array
@@ -374,6 +374,78 @@ function mx_login_block_message(int $retryAfter): string
 {
     $minutes = max(1, (int) ceil($retryAfter / 60));
     return 'Çok fazla hatalı giriş denemesi yapıldı. Lütfen yaklaşık ' . $minutes . ' dakika sonra tekrar deneyin.';
+}
+
+function mx_public_rate_limit(string $scope, string $identifier = '', int $maxRequests = 60, int $windowSeconds = 300): array
+{
+    $maxRequests = max(3, $maxRequests);
+    $windowSeconds = max(60, $windowSeconds);
+    $scope = mx_clean_string('public_' . $scope, 32);
+    $ip = mx_client_ip();
+    $identifierHash = hash('sha256', strtolower(mx_clean_string($identifier !== '' ? $identifier : $ip, 220)));
+
+    if (!mx_login_attempts_table_ready()) {
+        return ['allowed' => true, 'retry_after' => 0];
+    }
+
+    try {
+        $pdo = mx_pdo();
+        $pdo->prepare('DELETE FROM login_attempts WHERE created_at < DATE_SUB(NOW(), INTERVAL 2 DAY)')->execute();
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*) AS attempts, MIN(created_at) AS first_attempt
+             FROM login_attempts
+             WHERE scope = :scope
+               AND created_at >= DATE_SUB(NOW(), INTERVAL {$windowSeconds} SECOND)
+               AND (identifier_hash = :identifier_hash OR ip_address = :ip_address)"
+        );
+        $stmt->execute([
+            ':scope' => $scope,
+            ':identifier_hash' => $identifierHash,
+            ':ip_address' => $ip,
+        ]);
+        $row = $stmt->fetch() ?: ['attempts' => 0, 'first_attempt' => null];
+        $attempts = (int) ($row['attempts'] ?? 0);
+
+        if ($attempts >= $maxRequests) {
+            $first = strtotime((string) ($row['first_attempt'] ?? 'now')) ?: time();
+            $retryAfter = max(60, ($first + $windowSeconds) - time());
+            return ['allowed' => false, 'retry_after' => $retryAfter];
+        }
+
+        $insert = $pdo->prepare(
+            'INSERT INTO login_attempts (scope, identifier_hash, ip_address, success, user_agent)
+             VALUES (:scope, :identifier_hash, :ip_address, 0, :user_agent)'
+        );
+        $insert->execute([
+            ':scope' => $scope,
+            ':identifier_hash' => $identifierHash,
+            ':ip_address' => $ip,
+            ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
+        ]);
+
+        return ['allowed' => true, 'retry_after' => 0];
+    } catch (Throwable $error) {
+        mx_log_error('public rate limit failed', $error, ['scope' => $scope]);
+        return ['allowed' => true, 'retry_after' => 0];
+    }
+}
+
+function mx_require_public_rate_limit(string $scope, string $identifier = '', int $maxRequests = 60, int $windowSeconds = 300): void
+{
+    $status = mx_public_rate_limit($scope, $identifier, $maxRequests, $windowSeconds);
+    if ($status['allowed']) {
+        return;
+    }
+
+    if (!headers_sent()) {
+        header('Retry-After: ' . (int) $status['retry_after']);
+    }
+
+    mx_json([
+        'ok' => false,
+        'message' => 'Çok fazla istek alındı. Lütfen kısa bir süre sonra tekrar deneyin.',
+    ], 429);
 }
 
 function mx_panel_login(string $username, string $password): bool

@@ -9,6 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $payload = mx_post_json();
+    mx_require_public_rate_limit(
+        'price_estimate',
+        (string) ($payload['pickup'] ?? '') . '|' . (string) ($payload['dropoff'] ?? ''),
+        80,
+        600
+    );
     $price = mx_calculate_price($payload);
     mx_json([
         'ok' => true,

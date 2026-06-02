@@ -29,6 +29,7 @@ try {
             'message' => 'Geçerli bir talep numarası girin.',
         ], 422);
     }
+    mx_require_public_rate_limit('tracking_lookup', $trackingCode, 30, 300);
 
     $routeSelect = (mx_column_exists('courier_requests', 'distance_type') ? ', distance_type' : ', NULL AS distance_type')
         . (mx_column_exists('courier_requests', 'route_status') ? ', route_status' : ', NULL AS route_status');

@@ -11,6 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     $stage = 'payload';
     $payload = mx_post_json();
+    mx_require_public_rate_limit(
+        'request_create',
+        (string) ($payload['senderPhone'] ?? '') . '|' . (string) ($payload['senderEmail'] ?? ''),
+        8,
+        900
+    );
 
     $required = [
         'pickup' => 'Alim mahallesi',
