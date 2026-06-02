@@ -13,6 +13,7 @@ deployment:
     - /bin/cp -R panel $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
     - /bin/cp cozumler.html $DEPLOYPATH
+    - /bin/cp cerez-politikasi.html $DEPLOYPATH
     - /bin/cp gizlilik-politikasi.html $DEPLOYPATH
     - /bin/cp hizmetler.html $DEPLOYPATH
     - /bin/cp iletisim.html $DEPLOYPATH
@@ -24,6 +25,8 @@ deployment:
     - /bin/cp talep-basarili.html $DEPLOYPATH
     - /bin/cp takip.html $DEPLOYPATH
     - /bin/cp teslimat-sartlari.html $DEPLOYPATH
+    - /bin/cp ticari-elektronik-ileti-onayi.html $DEPLOYPATH
+    - /bin/cp uyelik-sozlesmesi.html $DEPLOYPATH
     - /bin/cp yasakli-gonderiler.html $DEPLOYPATH
     - /bin/cp robots.txt $DEPLOYPATH
     - /bin/cp sitemap.xml $DEPLOYPATH

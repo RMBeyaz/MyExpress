@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $phone = mx_clean_string($_POST['phone'] ?? '', 40);
         $tckn = preg_replace('/\D/', '', (string) ($_POST['tckn'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
+        $membershipAgreement = isset($_POST['membership_agreement']);
         $kvkk = isset($_POST['kvkk']);
 
         if ($fullName === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $phone === '') {
@@ -36,6 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (!mx_valid_tckn($tckn)) {
             throw new RuntimeException('Geçerli T.C. kimlik numarası girin.');
+        }
+        if (!$membershipAgreement) {
+            throw new RuntimeException('Üyelik sözleşmesini onaylamalısınız.');
         }
         if (!$kvkk) {
             throw new RuntimeException('KVKK bilgilendirmesini onaylamalısınız.');
@@ -121,6 +125,7 @@ mx_account_header('Üye Ol', 'login');
     <label>Telefon<input type="tel" name="phone" required autocomplete="tel"></label>
     <label>T.C. kimlik no<input name="tckn" required inputmode="numeric" maxlength="11" autocomplete="off"></label>
     <label>Şifre<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+    <label class="account-check"><input type="checkbox" name="membership_agreement" required><span><a href="../uyelik-sozlesmesi.html" target="_blank">Üyelik Sözleşmesi</a>'ni okudum ve onaylıyorum.</span></label>
     <label class="account-check"><input type="checkbox" name="kvkk" required><span><a href="../kvkk-politikasi.html" target="_blank">KVKK Aydınlatma Metni</a>'ni okudum ve onaylıyorum.</span></label>
     <button class="btn btn-primary" type="submit">Üye Ol</button>
     <p class="account-muted">Zaten hesabınız var mı? <a href="giris.php">Giriş yapın</a>.</p>
