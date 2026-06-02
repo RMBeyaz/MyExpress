@@ -24,6 +24,7 @@ if ($id > 0 && mx_table_exists('courier_requests') && mx_column_exists('courier_
         $logs = $logStmt->fetchAll();
     }
 }
+[$logs, $logsPagination] = mx_paginate_array($logs, 'logs', 10);
 
 mx_account_header($request ? (string) $request['tracking_code'] : 'Talep Detayı', 'requests');
 ?>
@@ -65,6 +66,7 @@ mx_account_header($request ? (string) $request['tracking_code'] : 'Talep Detayı
           </div>
         <?php endforeach; ?>
       </div>
+      <?= mx_render_pagination($logsPagination, 'logs', 'İşlem geçmişi') ?>
     </article>
   </section>
 <?php endif; ?>

@@ -20,6 +20,7 @@ if (mx_table_exists('courier_requests') && mx_column_exists('courier_requests', 
     $stmt->execute([':customer_id' => mx_customer_id()]);
     $requests = $stmt->fetchAll();
 }
+[$requests, $requestsPagination] = mx_paginate_array($requests, 'requests', 10);
 
 mx_account_header('Taleplerim', 'requests');
 ?>
@@ -39,5 +40,6 @@ mx_account_header('Taleplerim', 'requests');
       </a>
     <?php endforeach; ?>
   </div>
+  <?= mx_render_pagination($requestsPagination, 'requests', 'Taleplerim') ?>
 </section>
 <?php mx_account_footer(); ?>

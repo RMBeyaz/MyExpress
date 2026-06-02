@@ -23,6 +23,7 @@ if (mx_table_exists('customer_invoices')) {
     $stmt->execute([':customer_id' => mx_customer_id(), ':status' => 'available']);
     $invoices = $stmt->fetchAll();
 }
+[$invoices, $invoicesPagination] = mx_paginate_array($invoices, 'invoices', 10);
 
 mx_account_header('Faturalarım', 'invoices');
 ?>
@@ -41,5 +42,6 @@ mx_account_header('Faturalarım', 'invoices');
       </a>
     <?php endforeach; ?>
   </div>
+  <?= mx_render_pagination($invoicesPagination, 'invoices', 'Faturalarım') ?>
 </section>
 <?php mx_account_footer(); ?>

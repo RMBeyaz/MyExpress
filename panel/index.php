@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !mx_panel_is_logged_in()) {
 $isReady = !empty($config['panel_user']) && (!empty($config['panel_pass_hash']) || !empty($config['panel_pass']));
 $notice = mx_clean_string($_GET['notice'] ?? '', 40);
 $requests = [];
+$requestsPagination = mx_pagination_state(0, 'requests', 10);
 $statuses = mx_statuses();
 $views = [
     'normal' => 'Normal görünüm',
@@ -90,6 +91,7 @@ $sortUrl = static function (string $key) use ($sortKey, $dirParam): string {
     $query = $_GET;
     $query['sort'] = $key;
     $query['dir'] = ($sortKey === $key && $dirParam === 'asc') ? 'desc' : 'asc';
+    unset($query['requests_page']);
     return '?' . http_build_query($query);
 };
 
@@ -108,6 +110,7 @@ $statusUrl = static function (string $status) use ($filters): string {
         $query['status'] = $status;
     }
     $query['view'] = $filters['view'];
+    unset($query['requests_page']);
     return 'index.php' . ($query ? '?' . http_build_query($query) : '');
 };
 
@@ -288,13 +291,24 @@ if (mx_panel_is_logged_in()) {
         $qualifiedSort = in_array($sortKey, ['date', 'status', 'tracking', 'sender', 'recipient'], true) || $sort === 'created_at'
             ? 'cr.' . $sort
             : str_replace(['price', 'distance_km'], ['cr.price', 'cr.distance_km'], $sort);
+        $countSql = "SELECT COUNT(*)
+                FROM courier_requests cr{$courierJoin}{$qualifiedWhereSql}";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $requestsPagination = mx_pagination_state((int) $countStmt->fetchColumn(), 'requests', 10);
+
         $sql = "SELECT cr.id, cr.tracking_code, cr.status, cr.pickup, cr.dropoff, cr.price, {$distanceSelect}
                    cr.sender_name, cr.sender_phone, cr.recipient_name, cr.recipient_phone, cr.created_at{$addressDetailSelect}{$routeMetaSelect}{$courierSelect}
                 FROM courier_requests cr{$courierJoin}{$qualifiedWhereSql}
                 ORDER BY {$qualifiedSort} {$dir}
-                LIMIT 120";
+                LIMIT :limit OFFSET :offset";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', (int) $requestsPagination['per_page'], PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int) $requestsPagination['offset'], PDO::PARAM_INT);
+        $stmt->execute();
         $requests = $stmt->fetchAll();
     } catch (Throwable $exception) {
         $panelError = 'Talepler su an listelenemiyor. Detay icin server error_log kontrol edilmeli.';
@@ -354,7 +368,7 @@ if (mx_panel_is_logged_in()) {
         <section class="panel-card">
           <div class="panel-card-heading">
             <h2>Son Talepler</h2>
-            <span><?= count($requests) ?> kayıt</span>
+            <span><?= (int) $requestsPagination['total'] ?> kayıt</span>
           </div>
           <?php if ($notice === 'deleted'): ?>
             <div class="panel-toast is-visible">Talep silindi.</div>
@@ -364,6 +378,7 @@ if (mx_panel_is_logged_in()) {
             <strong><?= $hasActivePanelFilters ? 'Açık' : 'Kapalı' ?></strong>
           </button>
           <form id="panel-filters" class="panel-filters <?= $hasActivePanelFilters ? 'is-open' : '' ?>" method="get">
+            <input type="hidden" name="requests_per_page" value="<?= (int) $requestsPagination['per_page'] ?>">
             <label class="filter-view">Görünüm
               <select name="view">
                 <?php foreach ($views as $key => $label): ?>
@@ -456,6 +471,7 @@ if (mx_panel_is_logged_in()) {
               </tbody>
             </table>
           </div>
+          <?= mx_render_pagination($requestsPagination, 'requests', 'Talepler') ?>
         </section>
         <div class="panel-modal" data-delete-modal hidden>
           <form class="panel-modal-card" method="post">

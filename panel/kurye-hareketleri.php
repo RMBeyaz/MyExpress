@@ -36,12 +36,12 @@ if (mx_column_exists('courier_requests', 'assigned_courier_id')) {
          LEFT JOIN request_status_logs rsl ON rsl.request_id = cr.id
          WHERE cr.assigned_courier_id = :id
          GROUP BY cr.id, cr.tracking_code, cr.status, cr.pickup, cr.dropoff, cr.price, cr.created_at
-         ORDER BY COALESCE(MAX(rsl.created_at), cr.created_at) DESC
-         LIMIT 120'
+         ORDER BY COALESCE(MAX(rsl.created_at), cr.created_at) DESC'
     );
     $query->execute([':id' => $id]);
     $requests = $query->fetchAll();
 }
+[$requests, $requestsPagination] = mx_paginate_array($requests, 'requests', 10);
 
 $statuses = mx_statuses();
 ?>
@@ -79,14 +79,14 @@ $statuses = mx_statuses();
         <article class="panel-card">
           <h2>Özet</h2>
           <p class="panel-help-text">Bu ekran kuryeye atanmış talepleri, güncel durumlarını ve son işlem zamanını gösterir.</p>
-          <p><strong><?= count($requests) ?></strong> atanmış talep listeleniyor.</p>
+          <p><strong><?= (int) $requestsPagination['total'] ?></strong> atanmış talep listeleniyor.</p>
         </article>
       </section>
 
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>Atanan Talepler</h2>
-          <span><?= count($requests) ?> kayıt</span>
+          <span><?= (int) $requestsPagination['total'] ?> kayıt</span>
         </div>
         <div class="panel-table-wrap">
           <table class="panel-table user-table-singleline">
@@ -106,6 +106,7 @@ $statuses = mx_statuses();
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($requestsPagination, 'requests', 'Atanan talepler') ?>
       </section>
     </main>
   </body>

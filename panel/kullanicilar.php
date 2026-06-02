@@ -287,6 +287,8 @@ if (!mx_table_exists('panel_users')) {
 if (mx_table_exists('couriers')) {
     $couriers = $pdo->query('SELECT id, full_name, phone, vehicle_type, plate, is_active, created_at FROM couriers ORDER BY is_active DESC, full_name')->fetchAll();
 }
+[$couriers, $couriersPagination] = mx_paginate_array($couriers, 'couriers', 10);
+[$users, $usersPagination] = mx_paginate_array($users, 'users', 10);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -363,7 +365,7 @@ if (mx_table_exists('couriers')) {
         <section class="panel-card">
           <div class="panel-card-heading">
             <h2>Kuryeler</h2>
-            <span><?= count($couriers) ?> kayıt</span>
+            <span><?= (int) $couriersPagination['total'] ?> kayıt</span>
           </div>
           <div class="panel-table-wrap">
             <table class="panel-table user-table user-table-singleline courier-table">
@@ -410,13 +412,14 @@ if (mx_table_exists('couriers')) {
               </tbody>
             </table>
           </div>
+          <?= mx_render_pagination($couriersPagination, 'couriers', 'Kuryeler') ?>
         </section>
       </section>
 
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>Panel Kullanıcıları</h2>
-          <span><?= count($users) ?> kayıt</span>
+          <span><?= (int) $usersPagination['total'] ?> kayıt</span>
         </div>
         <?php if ($message !== ''): ?><p class="panel-success"><?= mx_h($message) ?></p><?php endif; ?>
         <?php if ($error !== ''): ?><p class="panel-alert"><?= mx_h($error) ?></p><?php endif; ?>
@@ -473,6 +476,7 @@ if (mx_table_exists('couriers')) {
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($usersPagination, 'users', 'Panel kullanıcıları') ?>
       </section>
     </main>
   </body>

@@ -32,6 +32,7 @@ if (mx_table_exists('customer_addresses')) {
     $addressStmt->execute([':id' => $id]);
     $addresses = $addressStmt->fetchAll();
 }
+[$addresses, $addressesPagination] = mx_paginate_array($addresses, 'addresses', 10);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -61,7 +62,7 @@ if (mx_table_exists('customer_addresses')) {
           <dl class="panel-detail-list">
             <dt>E-posta</dt><dd><a href="mailto:<?= mx_h($customer['email']) ?>"><?= mx_h($customer['email']) ?></a></dd>
             <dt>Telefon</dt><dd><?= $customer['phone'] ? '<a href="tel:' . mx_h($customer['phone']) . '">' . mx_h($customer['phone']) . '</a>' : '-' ?></dd>
-            <dt>Adres</dt><dd><?= count($addresses) ?> kayıt</dd>
+            <dt>Adres</dt><dd><?= (int) $addressesPagination['total'] ?> kayıt</dd>
           </dl>
         </article>
         <article class="panel-card">
@@ -73,7 +74,7 @@ if (mx_table_exists('customer_addresses')) {
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>Kayıtlı Adresler</h2>
-          <span><?= count($addresses) ?> kayıt</span>
+          <span><?= (int) $addressesPagination['total'] ?> kayıt</span>
         </div>
         <div class="panel-table-wrap">
           <table class="panel-table customer-address-table">
@@ -92,6 +93,7 @@ if (mx_table_exists('customer_addresses')) {
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($addressesPagination, 'addresses', 'Adresler') ?>
       </section>
     </main>
   </body>

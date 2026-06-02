@@ -34,12 +34,12 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
         'SELECT id, tracking_code, status, pickup, dropoff, price, distance_km, created_at
          FROM courier_requests
          WHERE customer_id = :id
-         ORDER BY created_at DESC
-         LIMIT 250'
+         ORDER BY created_at DESC'
     );
     $query->execute([':id' => $id]);
     $requests = $query->fetchAll();
 }
+[$requests, $requestsPagination] = mx_paginate_array($requests, 'requests', 10);
 
 $statuses = mx_statuses();
 ?>
@@ -78,14 +78,14 @@ $statuses = mx_statuses();
         <article class="panel-card">
           <h2>Özet</h2>
           <p class="panel-help-text">Bu ekranda müşteriye bağlı olarak açılmış talepler listelenir. Talep detayına giderek operasyon adımlarını görebilirsiniz.</p>
-          <p><strong><?= count($requests) ?></strong> talep listeleniyor.</p>
+          <p><strong><?= (int) $requestsPagination['total'] ?></strong> talep listeleniyor.</p>
         </article>
       </section>
 
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>Talep Geçmişi</h2>
-          <span><?= count($requests) ?> kayıt</span>
+          <span><?= (int) $requestsPagination['total'] ?> kayıt</span>
         </div>
         <div class="panel-table-wrap">
           <table class="panel-table audit-table customer-history-table">
@@ -105,6 +105,7 @@ $statuses = mx_statuses();
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($requestsPagination, 'requests', 'Talep geçmişi') ?>
       </section>
     </main>
   </body>

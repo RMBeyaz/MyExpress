@@ -106,6 +106,7 @@ if (mx_table_exists('customer_addresses')) {
     $stmt->execute([':customer_id' => $customerId]);
     $addresses = $stmt->fetchAll();
 }
+[$addresses, $addressesPagination] = mx_paginate_array($addresses, 'addresses', 10);
 
 mx_account_header('Adreslerim', 'addresses');
 ?>
@@ -164,6 +165,7 @@ mx_account_header('Adreslerim', 'addresses');
         </div>
       <?php endforeach; ?>
     </div>
+    <?= mx_render_pagination($addressesPagination, 'addresses', 'Adreslerim') ?>
   </div>
 </section>
 <?php mx_account_footer(); ?>

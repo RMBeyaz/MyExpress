@@ -147,6 +147,7 @@ if (mx_table_exists('customers')) {
 } else {
     $error = 'customers tablosu yok. Önce migrations/007_customer_portal.sql dosyasını çalıştırın.';
 }
+[$customers, $customersPagination] = mx_paginate_array($customers, 'customers', 10);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -197,7 +198,7 @@ if (mx_table_exists('customers')) {
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>Müşteri Listesi</h2>
-          <span><?= count($customers) ?> kayıt</span>
+          <span><?= (int) $customersPagination['total'] ?> kayıt</span>
         </div>
         <div class="panel-table-wrap">
           <table class="panel-table user-table customer-table">
@@ -244,6 +245,7 @@ if (mx_table_exists('customers')) {
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($customersPagination, 'customers', 'Müşteriler') ?>
       </section>
     </main>
   </body>

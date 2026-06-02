@@ -263,6 +263,8 @@ if (mx_table_exists('request_audit_logs')) {
     $audit->execute([':id' => $id]);
     $auditLogs = $audit->fetchAll();
 }
+[$statusLogs, $statusLogsPagination] = mx_paginate_array($statusLogs, 'status_logs', 10);
+[$auditLogs, $auditLogsPagination] = mx_paginate_array($auditLogs, 'audit_logs', 10);
 
 $statuses = mx_statuses();
 $hasCourierAssignment = mx_table_exists('couriers') && mx_column_exists('courier_requests', 'assigned_courier_id');
@@ -371,6 +373,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
               <p><strong><?= mx_h($statuses[$log['status']] ?? $log['status']) ?></strong><br><?= mx_h($log['created_at']) ?><br><span><?= mx_h($log['note']) ?></span></p>
             <?php endforeach; ?>
           </div>
+          <?= mx_render_pagination($statusLogsPagination, 'status_logs', 'Durum geçmişi') ?>
         </article>
       </section>
 
@@ -474,6 +477,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
               <p><strong><?= mx_h($auditLog['action']) ?></strong> · <?= mx_h($auditLog['admin_user']) ?><br><?= mx_h($auditLog['created_at']) ?><br><span><?= mx_h($auditLog['details']) ?></span></p>
             <?php endforeach; ?>
           </div>
+          <?= mx_render_pagination($auditLogsPagination, 'audit_logs', 'İşlem kayıtları') ?>
         </section>
       <?php endif; ?>
     </main>

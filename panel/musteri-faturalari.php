@@ -161,6 +161,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
     $requestStmt->execute([':customer_id' => (int) $customer['id']]);
     $requests = $requestStmt->fetchAll();
 }
+[$invoices, $invoicesPagination] = mx_paginate_array($invoices, 'invoices', 10);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -224,7 +225,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
           <dl class="panel-detail-list">
             <dt>E-posta</dt><dd><a href="mailto:<?= mx_h($customer['email']) ?>"><?= mx_h($customer['email']) ?></a></dd>
             <dt>Telefon</dt><dd><?= $customer['phone'] ? '<a href="tel:' . mx_h($customer['phone']) . '">' . mx_h($customer['phone']) . '</a>' : '-' ?></dd>
-            <dt>Fatura</dt><dd><?= count($invoices) ?> kayıt</dd>
+            <dt>Fatura</dt><dd><?= (int) $invoicesPagination['total'] ?> kayıt</dd>
           </dl>
         </article>
       </section>
@@ -232,7 +233,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>Tanımlı Faturalar</h2>
-          <span><?= count($invoices) ?> kayıt</span>
+          <span><?= (int) $invoicesPagination['total'] ?> kayıt</span>
         </div>
         <div class="panel-table-wrap">
           <table class="panel-table audit-table">
@@ -267,6 +268,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($invoicesPagination, 'invoices', 'Faturalar') ?>
       </section>
     </main>
   </body>

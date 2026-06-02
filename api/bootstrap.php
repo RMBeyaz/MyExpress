@@ -166,6 +166,96 @@ function mx_pdo(): PDO
     return $pdo;
 }
 
+function mx_page_size_options(): array
+{
+    return [10, 25, 50, 100];
+}
+
+function mx_pagination_state(int $total, string $prefix = 'list', int $defaultPerPage = 10): array
+{
+    $options = mx_page_size_options();
+    $perPageKey = $prefix . '_per_page';
+    $pageKey = $prefix . '_page';
+    $perPage = (int) ($_GET[$perPageKey] ?? $defaultPerPage);
+    if (!in_array($perPage, $options, true)) {
+        $perPage = in_array($defaultPerPage, $options, true) ? $defaultPerPage : 10;
+    }
+
+    $pageCount = max(1, (int) ceil(max(0, $total) / $perPage));
+    $page = max(1, min($pageCount, (int) ($_GET[$pageKey] ?? 1)));
+
+    return [
+        'total' => max(0, $total),
+        'page' => $page,
+        'per_page' => $perPage,
+        'page_count' => $pageCount,
+        'offset' => ($page - 1) * $perPage,
+        'from' => $total > 0 ? (($page - 1) * $perPage) + 1 : 0,
+        'to' => min($total, $page * $perPage),
+    ];
+}
+
+function mx_paginate_array(array $rows, string $prefix = 'list', int $defaultPerPage = 10): array
+{
+    $pagination = mx_pagination_state(count($rows), $prefix, $defaultPerPage);
+
+    return [
+        array_slice($rows, $pagination['offset'], $pagination['per_page']),
+        $pagination,
+    ];
+}
+
+function mx_pagination_url(string $prefix, int $page, ?int $perPage = null): string
+{
+    $query = $_GET;
+    $query[$prefix . '_page'] = max(1, $page);
+    if ($perPage !== null) {
+        $query[$prefix . '_per_page'] = $perPage;
+    }
+
+    $queryString = http_build_query($query);
+    $path = (string) ($_SERVER['PHP_SELF'] ?? '');
+
+    return $path . ($queryString !== '' ? '?' . $queryString : '');
+}
+
+function mx_render_pagination(array $pagination, string $prefix = 'list', string $label = 'Liste'): string
+{
+    $total = (int) ($pagination['total'] ?? 0);
+    $page = (int) ($pagination['page'] ?? 1);
+    $pageCount = (int) ($pagination['page_count'] ?? 1);
+    $perPage = (int) ($pagination['per_page'] ?? 10);
+    $from = (int) ($pagination['from'] ?? 0);
+    $to = (int) ($pagination['to'] ?? 0);
+    $hidden = '';
+    foreach ($_GET as $key => $value) {
+        if ($key === $prefix . '_page' || $key === $prefix . '_per_page' || is_array($value)) {
+            continue;
+        }
+        $hidden .= '<input type="hidden" name="' . mx_h($key) . '" value="' . mx_h((string) $value) . '">';
+    }
+
+    $options = '';
+    foreach (mx_page_size_options() as $option) {
+        $selected = $option === $perPage ? ' selected' : '';
+        $options .= '<option value="' . $option . '"' . $selected . '>' . $option . '</option>';
+    }
+
+    $previousClass = $page <= 1 ? ' is-disabled' : '';
+    $nextClass = $page >= $pageCount ? ' is-disabled' : '';
+    $previousHref = $page > 1 ? mx_pagination_url($prefix, $page - 1, $perPage) : '#';
+    $nextHref = $page < $pageCount ? mx_pagination_url($prefix, $page + 1, $perPage) : '#';
+
+    return '<nav class="list-pagination" aria-label="' . mx_h($label) . ' sayfalama">'
+        . '<div class="pagination-summary"><strong>' . mx_h($label) . '</strong><span>' . $from . '-' . $to . ' / ' . $total . ' kayıt</span></div>'
+        . '<form class="pagination-size" method="get">' . $hidden . '<input type="hidden" name="' . mx_h($prefix . '_page') . '" value="1">'
+        . '<label>Sayfa başına <select name="' . mx_h($prefix . '_per_page') . '" onchange="this.form.submit()">' . $options . '</select></label></form>'
+        . '<div class="pagination-controls"><a class="pagination-link' . $previousClass . '" href="' . mx_h($previousHref) . '" aria-disabled="' . ($page <= 1 ? 'true' : 'false') . '">Önceki</a>'
+        . '<span>Sayfa ' . $page . ' / ' . $pageCount . '</span>'
+        . '<a class="pagination-link' . $nextClass . '" href="' . mx_h($nextHref) . '" aria-disabled="' . ($page >= $pageCount ? 'true' : 'false') . '">Sonraki</a></div>'
+        . '</nav>';
+}
+
 function mx_json(array $payload, int $status = 200)
 {
     http_response_code($status);

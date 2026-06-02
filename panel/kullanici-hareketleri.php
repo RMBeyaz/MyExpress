@@ -33,12 +33,12 @@ if (mx_table_exists('request_audit_logs')) {
         'SELECT request_id, admin_user, action, details, ip_address, created_at
          FROM request_audit_logs
          WHERE admin_user = :username
-         ORDER BY created_at DESC
-         LIMIT 250'
+         ORDER BY created_at DESC'
     );
     $logStmt->execute([':username' => $user['username']]);
     $logs = $logStmt->fetchAll();
 }
+[$logs, $logsPagination] = mx_paginate_array($logs, 'logs', 10);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -81,7 +81,7 @@ if (mx_table_exists('request_audit_logs')) {
       <section class="panel-card">
         <div class="panel-card-heading">
           <h2>İşlem Geçmişi</h2>
-          <span><?= count($logs) ?> kayıt</span>
+          <span><?= (int) $logsPagination['total'] ?> kayıt</span>
         </div>
         <?php if (!mx_table_exists('request_audit_logs')): ?>
           <p class="panel-alert">request_audit_logs tablosu bulunamadı.</p>
@@ -109,6 +109,7 @@ if (mx_table_exists('request_audit_logs')) {
             </tbody>
           </table>
         </div>
+        <?= mx_render_pagination($logsPagination, 'logs', 'İşlem geçmişi') ?>
       </section>
     </main>
   </body>
