@@ -53,8 +53,8 @@ select {
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 28px;
+  justify-content: flex-start;
+  gap: 14px;
   min-height: 74px;
   padding: 8px clamp(20px, 5vw, 72px);
   background: rgba(250, 248, 242, 0.92);
@@ -66,6 +66,7 @@ select {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
+  order: 1;
 }
 
 .brand img {
@@ -74,11 +75,33 @@ select {
   height: auto;
 }
 
-.main-nav,
-.header-actions {
+.main-nav {
   display: flex;
   align-items: center;
   gap: 22px;
+  order: 3;
+  margin-left: auto;
+}
+
+.header-actions {
+  display: contents;
+}
+
+.header-actions .ghost-link {
+  order: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-left: 2px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(11, 34, 54, 0.16);
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.header-actions .header-icon-link {
+  order: 4;
 }
 
 .mobile-menu-panel {
@@ -2462,6 +2485,18 @@ h3 {
     gap: 8px 16px;
   }
 
+  .brand {
+    order: 0;
+  }
+
+  .main-nav {
+    margin-left: 0;
+  }
+
+  .menu-toggle {
+    margin-left: auto;
+  }
+
   .mobile-menu-panel {
     position: absolute;
     top: calc(100% + 10px);
@@ -2559,6 +2594,8 @@ h3 {
     align-items: center;
     justify-content: center;
     min-height: 34px;
+    margin-left: 0;
+    padding: 0 10px;
     color: var(--navy);
     background: rgba(255, 255, 255, 0.58);
     border: 1px solid rgba(11, 34, 54, 0.08);
