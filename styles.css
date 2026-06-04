@@ -4204,6 +4204,29 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.panel-body .invoice-payment-form {
+  min-width: 118px;
+}
+
+.panel-body .invoice-payment-form select {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 28px 6px 10px;
+  color: var(--navy);
+  background: #fff;
+  border: 1px solid #dbe2e7;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.panel-body .invoice-payment-form select:focus {
+  border-color: rgba(243, 66, 54, 0.55);
+  outline: 3px solid rgba(243, 66, 54, 0.12);
+}
+
 .panel-body .manual-request-grid {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }

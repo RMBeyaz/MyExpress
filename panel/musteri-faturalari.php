@@ -135,6 +135,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mx_audit_log(null, 'customer_invoice_delete', $customer['email'] . ' müşterisinin faturası silindi: ' . $invoice['title']);
             $message = 'Fatura silindi.';
         }
+
+        if ($action === 'update_payment_status') {
+            if (!mx_column_exists('customer_invoices', 'payment_status')) {
+                throw new RuntimeException('Fatura ödeme durumu alanı hazır değil.');
+            }
+
+            $invoiceId = (int) ($_POST['invoice_id'] ?? 0);
+            $paymentStatus = mx_clean_string($_POST['payment_status'] ?? '', 32);
+            if (!in_array($paymentStatus, ['paid', 'unpaid'], true)) {
+                throw new RuntimeException('Geçersiz ödeme durumu.');
+            }
+
+            $requestIdSelect = mx_column_exists('customer_invoices', 'request_id')
+                ? ', request_id'
+                : ', NULL AS request_id';
+            $target = $pdo->prepare(
+                'SELECT title, payment_status' . $requestIdSelect . '
+                 FROM customer_invoices
+                 WHERE id = :id AND customer_id = :customer_id
+                 LIMIT 1'
+            );
+            $target->execute([
+                ':id' => $invoiceId,
+                ':customer_id' => (int) $customer['id'],
+            ]);
+            $invoice = $target->fetch();
+            if (!$invoice) {
+                throw new RuntimeException('Fatura bulunamadı.');
+            }
+
+            $pdo->prepare(
+                'UPDATE customer_invoices
+                 SET payment_status = :payment_status
+                 WHERE id = :id AND customer_id = :customer_id'
+            )->execute([
+                ':payment_status' => $paymentStatus,
+                ':id' => $invoiceId,
+                ':customer_id' => (int) $customer['id'],
+            ]);
+
+            $paymentLabel = $paymentStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
+            mx_audit_log(
+                !empty($invoice['request_id']) ? (int) $invoice['request_id'] : null,
+                'customer_invoice_payment_status',
+                $customer['email'] . ' müşterisinin fatura ödeme durumu güncellendi: ' . $invoice['title'] . ' · ' . $paymentLabel
+            );
+            $message = 'Fatura ödeme durumu güncellendi.';
+        }
     } catch (Throwable $exception) {
         $error = 'İşlem tamamlanamadı: ' . $exception->getMessage();
         mx_log_error('panel customer invoice operation failed', $exception);
@@ -169,7 +217,7 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($customer['full_name']) ?> | Faturalar</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
+    <link rel="stylesheet" href="../styles.css?v=20260604-invoice-payment">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -250,7 +298,18 @@ if (mx_column_exists('courier_requests', 'customer_id')) {
                     <?php endif; ?>
                   </td>
                   <td><?= $invoice['status'] === 'available' ? 'Yayında' : 'Taslak' ?></td>
-                  <td><?= ($invoice['payment_status'] ?? 'unpaid') === 'paid' ? 'Ödendi' : 'Ödenmedi' ?></td>
+                  <td>
+                    <form class="invoice-payment-form" method="post">
+    <?= mx_csrf_field() ?>
+                      <input type="hidden" name="action" value="update_payment_status">
+                      <input type="hidden" name="customer_id" value="<?= (int) $customer['id'] ?>">
+                      <input type="hidden" name="invoice_id" value="<?= (int) $invoice['id'] ?>">
+                      <select name="payment_status" aria-label="Fatura ödeme durumu" onchange="this.form.submit()">
+                        <option value="unpaid" <?= ($invoice['payment_status'] ?? 'unpaid') === 'unpaid' ? 'selected' : '' ?>>Ödenmedi</option>
+                        <option value="paid" <?= ($invoice['payment_status'] ?? 'unpaid') === 'paid' ? 'selected' : '' ?>>Ödendi</option>
+                      </select>
+                    </form>
+                  </td>
                   <td><?= mx_h(date('d.m.Y H:i', strtotime((string) $invoice['created_at']))) ?></td>
                   <td><a href="fatura-indir.php?id=<?= (int) $invoice['id'] ?>" target="_blank" rel="noopener">Aç</a></td>
                   <td>
