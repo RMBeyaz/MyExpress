@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && mx_panel_is_logged_in() && ($_POST[
         }
 
         mx_audit_log($deleteId, 'request_delete', 'Talep silindi. Talep: ' . $trackingCode . ' Aciklama: ' . $deleteReason);
+        mx_delete_courier_proof_files_for_request($deleteId);
         mx_pdo()->prepare('DELETE FROM courier_requests WHERE id = :id')->execute([':id' => $deleteId]);
         header('Location: index.php?notice=deleted');
         exit;
@@ -281,7 +282,7 @@ if (mx_panel_is_logged_in()) {
             . ($hasRouteStatus ? ', cr.route_status' : ', NULL AS route_status');
         $addressDetailSelect = ($hasPickupDistrict ? ', cr.pickup_district' : ', NULL AS pickup_district')
             . ($hasDropoffDistrict ? ', cr.dropoff_district' : ', NULL AS dropoff_district');
-        $courierSelect = $hasCourierAssignment ? ', c.full_name AS courier_name, c.phone AS courier_phone' : ", NULL AS courier_name, NULL AS courier_phone";
+        $courierSelect = $hasCourierAssignment ? ', c.id AS courier_id, c.full_name AS courier_name, c.phone AS courier_phone' : ", NULL AS courier_id, NULL AS courier_name, NULL AS courier_phone";
         $courierJoin = $hasCourierAssignment ? ' LEFT JOIN couriers c ON c.id = cr.assigned_courier_id' : '';
         $qualifiedWhereSql = $whereSql !== '' ? str_replace(
             ['status ', 'created_at ', 'tracking_code ', 'sender_name ', 'recipient_name ', 'sender_phone ', 'recipient_phone ', 'pickup ', 'pickup_street ', 'pickup_district ', 'pickup_neighborhood ', 'dropoff ', 'dropoff_street ', 'dropoff_district ', 'dropoff_neighborhood '],
@@ -372,6 +373,10 @@ if (mx_panel_is_logged_in()) {
           </div>
           <?php if ($notice === 'deleted'): ?>
             <div class="panel-toast is-visible">Talep silindi.</div>
+          <?php elseif ($notice === 'courier_missing'): ?>
+            <div class="panel-toast is-visible">Kuryeye iletmek için önce aktif bir kurye atayın.</div>
+          <?php elseif ($notice === 'courier_link_failed'): ?>
+            <div class="panel-toast is-visible">Kurye görev bağlantısı oluşturulamadı. Migration ve sunucu loglarını kontrol edin.</div>
           <?php endif; ?>
           <button class="panel-filter-toggle" type="button" data-filter-toggle aria-expanded="<?= $hasActivePanelFilters ? 'true' : 'false' ?>" aria-controls="panel-filters">
             <span>Filtreler</span>
@@ -433,15 +438,6 @@ if (mx_panel_is_logged_in()) {
                   <?php
                     $pickupShort = $shortRouteArea((string) $request['pickup'], $request['pickup_district'] ?? null);
                     $dropoffShort = $shortRouteArea((string) $request['dropoff'], $request['dropoff_district'] ?? null);
-                    $dispatchMessage = "MyExpress kurye görevi\n"
-                      . 'Talep No: ' . $request['tracking_code'] . "\n"
-                      . 'Durum: ' . mx_status_label($request['status']) . "\n"
-                      . 'Alım: ' . $request['pickup'] . "\n"
-                      . 'Teslim: ' . $request['dropoff'] . "\n"
-                      . 'Gönderici: ' . $request['sender_name'] . ' - ' . $request['sender_phone'] . "\n"
-                      . 'Alıcı: ' . $request['recipient_name'] . ' - ' . $request['recipient_phone'] . "\n"
-                      . 'Ücret: ' . $request['price'] . "\n"
-                      . 'Panel: https://www.myexpress.com.tr/panel/talep.php?id=' . (int) $request['id'];
                   ?>
                   <tr class="request-row request-row-<?= mx_h($request['status']) ?>">
                     <td><a class="tracking-link" href="talep.php?id=<?= (int) $request['id'] ?>"><?= mx_h($request['tracking_code']) ?></a></td>
@@ -456,7 +452,7 @@ if (mx_panel_is_logged_in()) {
                     <td><strong><?= mx_h(date('H:i', strtotime($request['created_at']))) ?></strong><br><small><?= mx_h(date('d.m.Y', strtotime($request['created_at']))) ?></small></td>
                     <td>
                       <?php if (!empty($request['courier_phone'])): ?>
-                        <a class="panel-icon-btn courier-dispatch-btn" href="<?= mx_h(mx_whatsapp_url((string) $request['courier_phone'], $dispatchMessage)) ?>" target="_blank" rel="noopener" title="<?= mx_h($request['courier_name']) ?> kuryesine ilet" aria-label="Kuryeye WhatsApp ile ilet">🏍</a>
+                        <a class="panel-icon-btn courier-dispatch-btn" href="kuryeye-ilet.php?id=<?= (int) $request['id'] ?>" target="_blank" rel="noopener" title="<?= mx_h($request['courier_name']) ?> kuryesine görev bağlantısını ilet" aria-label="Kuryeye WhatsApp ile görev bağlantısını ilet">🏍</a>
                         <small><?= mx_h($request['courier_name']) ?></small>
                       <?php else: ?>
                         <button class="panel-icon-btn courier-dispatch-btn is-disabled" type="button" data-courier-missing aria-label="Kurye atanmamış" title="Kurye atanmamış">🏍</button>

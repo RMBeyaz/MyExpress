@@ -24,7 +24,7 @@ function mx_security_headers(): void
     header('X-Frame-Options: SAMEORIGIN');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: strict-origin-when-cross-origin');
-    header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()');
+    header('Permissions-Policy: geolocation=(), microphone=(), camera=(self), payment=()');
     if (mx_is_https_request()) {
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
     }
@@ -845,7 +845,7 @@ function mx_column_exists(string $table, string $column): bool
     return (int) $stmt->fetchColumn() === 1;
 }
 
-function mx_audit_log(?int $requestId, string $action, string $details = ''): void
+function mx_audit_log(?int $requestId, string $action, string $details = '', ?string $actor = null): void
 {
     try {
         if (!mx_table_exists('request_audit_logs')) {
@@ -858,7 +858,7 @@ function mx_audit_log(?int $requestId, string $action, string $details = ''): vo
         );
         $stmt->execute([
             ':request_id' => $requestId,
-            ':admin_user' => mx_panel_user(),
+            ':admin_user' => $actor !== null ? mx_clean_string($actor, 80) : mx_panel_user(),
             ':action' => $action,
             ':details' => $details,
             ':ip_address' => mx_clean_string($_SERVER['REMOTE_ADDR'] ?? '', 45),
@@ -879,6 +879,145 @@ function mx_whatsapp_url(string $phone, string $message = ''): string
     }
 
     return 'https://wa.me/' . $digits . ($message !== '' ? '?text=' . rawurlencode($message) : '');
+}
+
+function mx_courier_task_token_hash(string $token): string
+{
+    return hash('sha256', $token);
+}
+
+function mx_courier_task_url(int $requestId, int $courierId): string
+{
+    if (
+        !mx_column_exists('courier_requests', 'courier_access_token_hash')
+        || !mx_column_exists('courier_requests', 'courier_access_token_expires_at')
+    ) {
+        throw new RuntimeException('Kurye görev bağlantısı için migration çalıştırılmalı.');
+    }
+
+    $token = bin2hex(random_bytes(32));
+    $stmt = mx_pdo()->prepare(
+        'UPDATE courier_requests
+         SET courier_access_token_hash = :token_hash,
+             courier_access_token_expires_at = DATE_ADD(NOW(), INTERVAL 7 DAY)
+         WHERE id = :id AND assigned_courier_id = :courier_id'
+    );
+    $stmt->execute([
+        ':token_hash' => mx_courier_task_token_hash($token),
+        ':id' => $requestId,
+        ':courier_id' => $courierId,
+    ]);
+    if ($stmt->rowCount() !== 1) {
+        throw new RuntimeException('Kurye görev bağlantısı oluşturulamadı.');
+    }
+
+    return mx_site_url('kurye-gorev.php?id=' . $requestId . '&token=' . rawurlencode($token));
+}
+
+function mx_courier_task_request(int $requestId, string $token): ?array
+{
+    if ($requestId <= 0 || !preg_match('/^[a-f0-9]{64}$/', $token) || !mx_table_exists('couriers')) {
+        return null;
+    }
+
+    $hasTokenColumns = mx_column_exists('courier_requests', 'courier_access_token_hash')
+        && mx_column_exists('courier_requests', 'courier_access_token_expires_at');
+    $tokenSelect = $hasTokenColumns
+        ? ', cr.courier_access_token_hash, cr.courier_access_token_expires_at'
+        : ', NULL AS courier_access_token_hash, NULL AS courier_access_token_expires_at';
+    $stmt = mx_pdo()->prepare(
+        'SELECT cr.*, c.full_name AS courier_name, c.phone AS courier_phone, c.vehicle_type AS courier_vehicle_type, c.plate AS courier_plate'
+        . $tokenSelect
+        . ' FROM courier_requests cr'
+        . ' INNER JOIN couriers c ON c.id = cr.assigned_courier_id AND c.is_active = 1'
+        . ' WHERE cr.id = :id LIMIT 1'
+    );
+    $stmt->execute([':id' => $requestId]);
+    $request = $stmt->fetch();
+    if (!$request) {
+        return null;
+    }
+
+    $storedHash = trim((string) ($request['courier_access_token_hash'] ?? ''));
+    $expiresAt = trim((string) ($request['courier_access_token_expires_at'] ?? ''));
+    if (
+        $storedHash === ''
+        || $expiresAt === ''
+        || strtotime($expiresAt) < time()
+        || !hash_equals($storedHash, mx_courier_task_token_hash($token))
+    ) {
+        return null;
+    }
+
+    return $request;
+}
+
+function mx_courier_proof_directory(): string
+{
+    return dirname(__DIR__) . '/uploads/kurye-kanitlari';
+}
+
+function mx_courier_proof_absolute_path(string $fileName): ?string
+{
+    $fileName = trim($fileName);
+    if ($fileName === '' || str_contains($fileName, '..') || str_contains($fileName, '/') || str_contains($fileName, '\\')) {
+        return null;
+    }
+
+    $base = realpath(mx_courier_proof_directory());
+    if ($base === false) {
+        return null;
+    }
+
+    $target = realpath($base . DIRECTORY_SEPARATOR . $fileName);
+    if ($target === false || !str_starts_with($target, $base . DIRECTORY_SEPARATOR)) {
+        return null;
+    }
+
+    return is_file($target) ? $target : null;
+}
+
+function mx_stream_courier_proof(array $proof): void
+{
+    $path = mx_courier_proof_absolute_path((string) ($proof['file_name'] ?? ''));
+    if ($path === null) {
+        http_response_code(404);
+        echo 'Kanıt dosyası bulunamadı.';
+        exit;
+    }
+
+    $mime = (string) ($proof['mime_type'] ?? 'application/octet-stream');
+    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        $mime = 'application/octet-stream';
+    }
+
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($path));
+    header('Content-Disposition: inline; filename="myexpress-kurye-kaniti"');
+    header('Cache-Control: private, no-store, max-age=0');
+    header('X-Content-Type-Options: nosniff');
+    readfile($path);
+    exit;
+}
+
+function mx_delete_courier_proof_files_for_request(int $requestId): void
+{
+    if ($requestId <= 0 || !mx_table_exists('courier_delivery_proofs')) {
+        return;
+    }
+
+    try {
+        $stmt = mx_pdo()->prepare('SELECT file_name FROM courier_delivery_proofs WHERE request_id = :request_id');
+        $stmt->execute([':request_id' => $requestId]);
+        foreach ($stmt->fetchAll() as $proof) {
+            $path = mx_courier_proof_absolute_path((string) ($proof['file_name'] ?? ''));
+            if ($path !== null) {
+                @unlink($path);
+            }
+        }
+    } catch (Throwable $error) {
+        mx_log_error('courier proof file cleanup failed', $error, ['request_id' => $requestId]);
+    }
 }
 
 function mx_site_url(string $path = ''): string

@@ -2908,6 +2908,250 @@ h3 {
   }
 }
 
+/* Kurye görev ekranı */
+.courier-task-body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--navy);
+  background: #eef3f5;
+}
+
+.courier-task-shell {
+  width: min(920px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.courier-task-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid rgba(11, 34, 54, 0.1);
+  border-radius: 8px;
+}
+
+.courier-task-header img {
+  width: 112px;
+  height: auto;
+}
+
+.courier-task-header h1 {
+  margin: 2px 0 8px;
+  font-size: clamp(24px, 4vw, 34px);
+  line-height: 1.05;
+}
+
+.courier-task-notice,
+.courier-task-error {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.courier-task-notice {
+  color: #17613b;
+  background: #e4f5eb;
+  border: 1px solid #b7dfc8;
+}
+
+.courier-task-error {
+  color: #8b2d26;
+  background: #fbe8e6;
+  border: 1px solid #efc1bd;
+}
+
+.courier-task-grid,
+.courier-task-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.courier-task-card {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid rgba(11, 34, 54, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(11, 34, 54, 0.06);
+}
+
+.courier-task-card h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.courier-task-card p {
+  margin: 8px 0;
+  color: #5c6c7b;
+  line-height: 1.55;
+}
+
+.courier-task-card > a:not(.courier-task-map-link) {
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.courier-task-shipment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.courier-task-shipment p {
+  margin-bottom: 0;
+}
+
+.courier-task-label {
+  margin: 0 0 4px !important;
+  color: var(--red) !important;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.courier-task-map-link {
+  display: inline-flex;
+  margin-top: 6px;
+  color: var(--red);
+  font-weight: 800;
+}
+
+.courier-task-form {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.courier-task-form label {
+  display: grid;
+  gap: 6px;
+  color: #526271;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.courier-task-form input,
+.courier-task-form textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 12px;
+  color: var(--navy);
+  background: #f8fafb;
+  border: 1px solid rgba(11, 34, 54, 0.14);
+  border-radius: 6px;
+}
+
+.courier-task-form textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.courier-task-form input[type="file"] {
+  padding: 9px;
+}
+
+.courier-task-form .btn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 2px;
+}
+
+.courier-task-form .btn:disabled,
+.courier-task-form input:disabled,
+.courier-task-form textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.courier-task-proof-list {
+  display: grid;
+  gap: 12px;
+}
+
+.courier-task-proof-list > h2 {
+  margin-bottom: 4px;
+}
+
+.courier-task-proof-list article,
+.panel-proof-item {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.courier-task-proof-list img,
+.panel-proof-item img {
+  display: block;
+  width: 96px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(11, 34, 54, 0.1);
+}
+
+.courier-task-proof-list article div,
+.panel-proof-item div {
+  display: grid;
+  gap: 3px;
+}
+
+.courier-task-proof-list span,
+.panel-proof-item span {
+  color: #647483;
+  font-size: 13px;
+}
+
+.panel-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.panel-proof-item {
+  padding: 12px;
+  background: #f8fafb;
+  border: 1px solid rgba(11, 34, 54, 0.08);
+  border-radius: 6px;
+}
+
+@media (max-width: 720px) {
+  .courier-task-shell {
+    width: min(100% - 20px, 560px);
+    padding-top: 10px;
+  }
+
+  .courier-task-header {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .courier-task-header img {
+    width: 82px;
+  }
+
+  .courier-task-header h1 {
+    font-size: 23px;
+  }
+
+  .courier-task-grid,
+  .courier-task-actions,
+  .courier-task-shipment,
+  .panel-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .courier-task-card {
+    padding: 16px;
+  }
+}
+
 /* Panel hardening layer: keeps admin pages independent from public-site typography. */
 .panel-body {
   min-height: 100vh;

@@ -11,7 +11,7 @@ Options -Indexes
   Header set X-Frame-Options "SAMEORIGIN"
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
-  Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=(self), payment=()"
   Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 </IfModule>
 

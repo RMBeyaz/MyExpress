@@ -60,6 +60,7 @@ $checks = [
         'pricing_settings' => false,
         'panel_users' => false,
         'couriers' => false,
+        'courier_delivery_proofs' => false,
         'customers' => false,
         'customer_addresses' => false,
         'customer_invoices' => false,
@@ -69,6 +70,8 @@ $checks = [
         'courier_requests.customer_id' => false,
         'courier_requests.distance_km' => false,
         'courier_requests.assigned_courier_id' => false,
+        'courier_requests.courier_access_token_hash' => false,
+        'courier_requests.courier_access_token_expires_at' => false,
         'courier_requests.pickup_city' => false,
         'courier_requests.pickup_district' => false,
         'courier_requests.pickup_road' => false,
@@ -133,6 +136,8 @@ try {
     $checks['columns']['courier_requests.customer_id'] = mx_column_exists('courier_requests', 'customer_id');
     $checks['columns']['courier_requests.distance_km'] = mx_column_exists('courier_requests', 'distance_km');
     $checks['columns']['courier_requests.assigned_courier_id'] = mx_column_exists('courier_requests', 'assigned_courier_id');
+    $checks['columns']['courier_requests.courier_access_token_hash'] = mx_column_exists('courier_requests', 'courier_access_token_hash');
+    $checks['columns']['courier_requests.courier_access_token_expires_at'] = mx_column_exists('courier_requests', 'courier_access_token_expires_at');
     foreach (['pickup_city', 'pickup_district', 'pickup_neighborhood', 'pickup_address_source', 'pickup_road', 'pickup_building_no', 'dropoff_city', 'dropoff_district', 'dropoff_neighborhood', 'dropoff_address_source', 'dropoff_road', 'dropoff_building_no', 'distance_type', 'route_distance_km', 'route_duration_min', 'route_provider', 'route_status'] as $column) {
         $checks['columns']['courier_requests.' . $column] = mx_column_exists('courier_requests', $column);
     }

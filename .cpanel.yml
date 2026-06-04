@@ -4,7 +4,9 @@ deployment:
     - export DEPLOYPATH=/home/myexpresscom/public_html/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/uploads/faturalar
+    - /bin/mkdir -p $DEPLOYPATH/uploads/kurye-kanitlari
     - /bin/cp uploads/faturalar/.htaccess $DEPLOYPATH/uploads/faturalar/.htaccess
+    - /bin/cp uploads/kurye-kanitlari/.htaccess $DEPLOYPATH/uploads/kurye-kanitlari/.htaccess
     - /bin/cp -R assets $DEPLOYPATH
     - /bin/cp -R api $DEPLOYPATH
     - /bin/cp -R hesabim $DEPLOYPATH
@@ -18,6 +20,8 @@ deployment:
     - /bin/cp hizmetler.html $DEPLOYPATH
     - /bin/cp iletisim.html $DEPLOYPATH
     - /bin/cp kurye-hizmet-sozlesmesi.html $DEPLOYPATH
+    - /bin/cp kurye-gorev.php $DEPLOYPATH
+    - /bin/cp kurye-kanit.php $DEPLOYPATH
     - /bin/cp kvkk-politikasi.html $DEPLOYPATH
     - /bin/cp nasil-calisir.html $DEPLOYPATH
     - /bin/cp sss.html $DEPLOYPATH

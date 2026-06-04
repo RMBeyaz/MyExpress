@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $trackingCode = (string) ($stmt->fetchColumn() ?: '');
         if ($trackingCode !== '') {
             mx_audit_log($id, 'request_delete', 'Talep detayindan silindi. Talep: ' . $trackingCode . ' Aciklama: ' . $deleteReason);
+            mx_delete_courier_proof_files_for_request($id);
             $pdo->prepare('DELETE FROM courier_requests WHERE id = :id')->execute([':id' => $id]);
         }
 
@@ -80,6 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':courier_id' => $courierId,
                     ':id' => $id,
                 ]);
+                if (mx_column_exists('courier_requests', 'courier_access_token_hash')) {
+                    $expirySql = mx_column_exists('courier_requests', 'courier_access_token_expires_at')
+                        ? ', courier_access_token_expires_at = NULL'
+                        : '';
+                    $pdo->prepare('UPDATE courier_requests SET courier_access_token_hash = NULL' . $expirySql . ' WHERE id = :id')->execute([':id' => $id]);
+                }
                 $pdo->prepare('INSERT INTO request_status_logs (request_id, status, note) VALUES (:id, :status, :note)')->execute([
                     ':id' => $id,
                     ':status' => 'assigned',
@@ -99,6 +106,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $pdo->prepare('UPDATE courier_requests SET assigned_courier_id = NULL WHERE id = :id')->execute([':id' => $id]);
+            if (mx_column_exists('courier_requests', 'courier_access_token_hash')) {
+                $expirySql = mx_column_exists('courier_requests', 'courier_access_token_expires_at')
+                    ? ', courier_access_token_expires_at = NULL'
+                    : '';
+                $pdo->prepare('UPDATE courier_requests SET courier_access_token_hash = NULL' . $expirySql . ' WHERE id = :id')->execute([':id' => $id]);
+            }
             mx_audit_log($id, 'courier_unassign', 'Kurye atamasi kaldirildi.');
             $updatedRequest = mx_request_by_id($id);
             if ($updatedRequest) {
@@ -263,6 +276,18 @@ if (mx_table_exists('request_audit_logs')) {
     $audit->execute([':id' => $id]);
     $auditLogs = $audit->fetchAll();
 }
+$courierProofs = [];
+if (mx_table_exists('courier_delivery_proofs')) {
+    $proofStmt = $pdo->prepare(
+        'SELECT cdp.id, cdp.proof_type, cdp.delivered_to, cdp.note, cdp.created_at, c.full_name AS courier_name
+         FROM courier_delivery_proofs cdp
+         LEFT JOIN couriers c ON c.id = cdp.courier_id
+         WHERE cdp.request_id = :id
+         ORDER BY cdp.created_at DESC'
+    );
+    $proofStmt->execute([':id' => $id]);
+    $courierProofs = $proofStmt->fetchAll();
+}
 [$statusLogs, $statusLogsPagination] = mx_paginate_array($statusLogs, 'status_logs', 10);
 [$auditLogs, $auditLogsPagination] = mx_paginate_array($auditLogs, 'audit_logs', 10);
 
@@ -298,7 +323,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
+    <link rel="stylesheet" href="../styles.css?v=20260604-courier-task">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -468,6 +493,30 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
           </section>
         </div>
       </form>
+
+      <?php if ($courierProofs): ?>
+        <section class="panel-card panel-proof-card">
+          <div class="panel-card-heading">
+            <h2>Teslimat Kanıtları</h2>
+            <span><?= count($courierProofs) ?> kayıt</span>
+          </div>
+          <div class="panel-proof-grid">
+            <?php foreach ($courierProofs as $proof): ?>
+              <article class="panel-proof-item">
+                <a href="kanit-goruntule.php?id=<?= (int) $proof['id'] ?>" target="_blank" rel="noopener">
+                  <img src="kanit-goruntule.php?id=<?= (int) $proof['id'] ?>" alt="<?= $proof['proof_type'] === 'pickup' ? 'Teslim alma fotoğrafı' : 'Teslim fotoğrafı' ?>">
+                </a>
+                <div>
+                  <strong><?= $proof['proof_type'] === 'pickup' ? 'Teslim alma' : 'Teslim' ?></strong>
+                  <span><?= mx_h($proof['courier_name'] ?: 'Kurye') ?> · <?= mx_h($proof['created_at']) ?></span>
+                  <?php if (!empty($proof['delivered_to'])): ?><span>Teslim edilen kişi: <?= mx_h($proof['delivered_to']) ?></span><?php endif; ?>
+                  <?php if (!empty($proof['note'])): ?><span><?= mx_h($proof['note']) ?></span><?php endif; ?>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </section>
+      <?php endif; ?>
 
       <?php if ($auditLogs): ?>
         <section class="panel-card panel-audit-card">
