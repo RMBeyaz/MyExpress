@@ -13,7 +13,7 @@ function mx_account_header(string $title, string $active = ''): void
     <title><?= mx_h($title) ?> | MyExpress Hesabım</title>
     <meta name="description" content="MyExpress müşteri hesabı ile kayıtlı adreslerinizi, kurye taleplerinizi ve faturalarınızı görüntüleyin.">
     <link rel="icon" type="image/png" href="../assets/Logo.png">
-    <link rel="stylesheet" href="../styles.css?v=20260521-request-compact">
+    <link rel="stylesheet" href="../styles.css?v=20260604-password-reset">
   </head>
   <body class="account-body">
     <header class="account-header">
@@ -75,7 +75,7 @@ function mx_account_footer(): void
       </div>
       <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="../script.js?v=20260521-request-compact"></script>
+    <script src="../script.js?v=20260604-password-reset"></script>
   </body>
 </html>
     <?php

@@ -1339,6 +1339,84 @@ function mx_customer_verification_ready(): bool
         && mx_column_exists('customers', 'email_verification_expires_at');
 }
 
+function mx_customer_password_reset_ready(): bool
+{
+    return mx_table_exists('customers')
+        && mx_column_exists('customers', 'password_reset_token')
+        && mx_column_exists('customers', 'password_reset_expires_at');
+}
+
+function mx_send_customer_password_reset_mail(string $email, string $fullName, string $token): bool
+{
+    $resetUrl = mx_site_url('hesabim/sifre-yenile.php?token=' . rawurlencode($token));
+    $textMessage = implode("\n", [
+        'Merhaba ' . $fullName . ',',
+        '',
+        'MyExpress hesabınız için şifre yenileme talebi aldık.',
+        'Yeni şifrenizi belirlemek için aşağıdaki bağlantıyı açın:',
+        '',
+        $resetUrl,
+        '',
+        'Bu bağlantı 30 dakika boyunca ve yalnızca bir kez kullanılabilir.',
+        'Bu işlemi siz başlatmadıysanız e-postayı dikkate almayın.',
+        '',
+        'MyExpress',
+    ]);
+    $safeName = mx_h($fullName);
+    $safeResetUrl = mx_h($resetUrl);
+    $htmlMessage = <<<HTML
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MyExpress şifre yenileme</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f7f9;color:#0b2238;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f9;margin:0;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #dce4ea;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 28px;background:#071d2f;color:#ffffff;">
+                <div style="font-size:22px;font-weight:800;letter-spacing:.2px;">MyExpress</div>
+                <div style="margin-top:6px;color:#b9c8d3;font-size:14px;">İstanbul içi kurye ve teslimat operasyonu</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px 26px;">
+                <p style="margin:0 0 10px;color:#ef4438;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;">Hesap güvenliği</p>
+                <h1 style="margin:0 0 14px;color:#0b2238;font-size:28px;line-height:1.16;font-weight:800;">Şifrenizi yenileyin</h1>
+                <p style="margin:0 0 22px;color:#536372;font-size:16px;line-height:1.55;">Merhaba {$safeName}, MyExpress hesabınız için şifre yenileme talebi aldık. Yeni şifrenizi güvenli şekilde belirlemek için aşağıdaki butonu kullanın.</p>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 22px;">
+                  <tr>
+                    <td style="background:#ef4438;border-radius:8px;">
+                      <a href="{$safeResetUrl}" style="display:inline-block;padding:14px 20px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:800;">Yeni Şifre Belirle</a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 12px;color:#536372;font-size:14px;line-height:1.5;">Buton çalışmazsa aşağıdaki bağlantıyı tarayıcınıza yapıştırabilirsiniz:</p>
+                <p style="margin:0;word-break:break-all;color:#0b2238;font-size:13px;line-height:1.5;"><a href="{$safeResetUrl}" style="color:#0b2238;">{$safeResetUrl}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e4ebf0;color:#6b7785;font-size:13px;line-height:1.5;">
+                Bu bağlantı güvenlik için 30 dakika boyunca ve yalnızca bir kez kullanılabilir. Talebi siz oluşturmadıysanız e-postayı dikkate almayın.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+HTML;
+
+    return mx_send_html_mail($email, 'MyExpress şifre yenileme bağlantınız', $textMessage, $htmlMessage);
+}
+
 function mx_refresh_customer_verification(int $customerId): bool
 {
     if ($customerId <= 0 || !mx_customer_verification_ready()) {
