@@ -3962,6 +3962,19 @@ h3 {
   min-height: 58px;
 }
 
+.panel-body .panel-address-autocomplete {
+  width: 100%;
+}
+
+.panel-body .panel-address-autocomplete .autocomplete-list {
+  z-index: 40;
+  min-width: min(420px, 100%);
+}
+
+.panel-body .panel-address-autocomplete .autocomplete-option {
+  font-size: 13px;
+}
+
 .panel-body .panel-edit-form select {
   width: 100%;
   border: 1px solid #cfd7dd;

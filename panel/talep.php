@@ -323,7 +323,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260604-courier-task">
+    <link rel="stylesheet" href="../styles.css?v=20260604-panel-address-autocomplete">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -465,8 +465,18 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
           <section class="panel-edit-section">
             <h3>Adresler</h3>
             <div class="panel-edit-grid panel-edit-grid-address">
-              <label>Gönderici ana adres <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly></label>
-              <label>Alıcı ana adres <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly></label>
+              <label>Gönderici ana adres
+                <div class="autocomplete-field panel-address-autocomplete">
+                  <input name="pickup" value="<?= mx_h($request['pickup']) ?>" required readonly autocomplete="off" data-panel-address-input data-address-prefix="pickup">
+                  <div class="autocomplete-list" data-autocomplete-list></div>
+                </div>
+              </label>
+              <label>Alıcı ana adres
+                <div class="autocomplete-field panel-address-autocomplete">
+                  <input name="dropoff" value="<?= mx_h($request['dropoff']) ?>" required readonly autocomplete="off" data-panel-address-input data-address-prefix="dropoff">
+                  <div class="autocomplete-list" data-autocomplete-list></div>
+                </div>
+              </label>
               <label>Gönderici açık adres / tarif <textarea name="pickup_street" required readonly><?= mx_h($request['pickup_street']) ?></textarea></label>
               <label>Alıcı açık adres / tarif <textarea name="dropoff_street" required readonly><?= mx_h($request['dropoff_street']) ?></textarea></label>
             </div>
@@ -583,6 +593,9 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       const routeProviderInput = document.querySelector('[data-route-provider]');
       const routeStatusInput = document.querySelector('[data-route-status]');
       const priceStatusText = document.querySelector('[data-price-status-text]');
+      const panelAddressInputs = document.querySelectorAll('[data-panel-address-input]');
+      const autocompleteTimers = new WeakMap();
+      const autocompleteControllers = new WeakMap();
       let editSubmitApproved = false;
       let pendingConfirmAction = null;
       const initialEditValues = new Map();
@@ -607,6 +620,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
           if (button) button.disabled = !enabled;
         });
         if (editToggle) editToggle.hidden = enabled;
+        if (!enabled) closeAllAddressSuggestions();
       };
 
       const restoreEditValues = () => {
@@ -636,6 +650,124 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       const updateSuggestedPrice = (ask = false) => {
         if (!priceInput || !distanceInput?.value) return;
         if (ask) window.alert('Fiyat gerçek rota hesaplamasıyla güncellendi.');
+      };
+
+      const closeAddressSuggestions = (input) => {
+        const list = input?.closest('.autocomplete-field')?.querySelector('[data-autocomplete-list]');
+        if (!list) return;
+        list.classList.remove('is-open');
+        list.innerHTML = '';
+      };
+
+      const closeAllAddressSuggestions = (exceptInput = null) => {
+        panelAddressInputs.forEach((input) => {
+          if (input !== exceptInput) closeAddressSuggestions(input);
+        });
+      };
+
+      const escapeAddressText = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+      const clearAddressRouteState = (prefix) => {
+        const latInput = prefix === 'pickup' ? pickupLat : dropoffLat;
+        const lngInput = prefix === 'pickup' ? pickupLng : dropoffLng;
+        if (latInput) latInput.value = '';
+        if (lngInput) lngInput.value = '';
+        if (distanceInput) distanceInput.value = '';
+        if (routeDistanceInput) routeDistanceInput.value = '';
+        if (routeDurationInput) routeDurationInput.value = '';
+        if (routeProviderInput) routeProviderInput.value = '';
+        if (distanceTypeInput) distanceTypeInput.value = 'manual_required';
+        if (routeStatusInput) routeStatusInput.value = 'address_changed';
+        if (priceStatusText) priceStatusText.value = 'Adres değişti, KM hesaplanmalı';
+      };
+
+      const formatAddressSuggestion = (result) => {
+        const address = result.address || {};
+        const road = address.road || address.pedestrian || address.residential || address.footway || '';
+        const neighborhood = address.neighbourhood || address.suburb || address.quarter || '';
+        const district = address.town || address.county || address.city_district || address.municipality || '';
+        const parts = [road, neighborhood, district].filter(Boolean);
+        return parts.length ? parts.join(', ') : result.display_name;
+      };
+
+      const fetchAddressSuggestions = async (query, input) => {
+        const previousController = autocompleteControllers.get(input);
+        previousController?.abort();
+        const controller = new AbortController();
+        autocompleteControllers.set(input, controller);
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('format', 'jsonv2');
+        url.searchParams.set('addressdetails', '1');
+        url.searchParams.set('limit', '8');
+        url.searchParams.set('countrycodes', 'tr');
+        url.searchParams.set('accept-language', 'tr');
+        url.searchParams.set('viewbox', '28.01,41.65,29.95,40.72');
+        url.searchParams.set('bounded', '1');
+        url.searchParams.set('q', `${query}, İstanbul`);
+        const response = await fetch(url.toString(), {
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('address_search_failed');
+        return response.json();
+      };
+
+      const selectAddressSuggestion = (input, result) => {
+        const prefix = input.dataset.addressPrefix;
+        const latInput = prefix === 'pickup' ? pickupLat : dropoffLat;
+        const lngInput = prefix === 'pickup' ? pickupLng : dropoffLng;
+        input.value = formatAddressSuggestion(result);
+        if (latInput) latInput.value = Number(result.lat).toFixed(7);
+        if (lngInput) lngInput.value = Number(result.lon).toFixed(7);
+        if (distanceInput) distanceInput.value = '';
+        if (routeDistanceInput) routeDistanceInput.value = '';
+        if (routeDurationInput) routeDurationInput.value = '';
+        if (routeProviderInput) routeProviderInput.value = '';
+        if (distanceTypeInput) distanceTypeInput.value = 'manual_required';
+        if (routeStatusInput) routeStatusInput.value = 'address_changed';
+        if (priceStatusText) priceStatusText.value = 'Adres seçildi, KM hesaplanmalı';
+        closeAddressSuggestions(input);
+      };
+
+      const renderAddressSuggestions = async (input) => {
+        const list = input.closest('.autocomplete-field')?.querySelector('[data-autocomplete-list]');
+        const query = input.value.trim();
+        if (!list || input.readOnly || query.length < 2) {
+          closeAddressSuggestions(input);
+          return;
+        }
+        list.innerHTML = '<div class="autocomplete-status">Adres önerileri aranıyor...</div>';
+        list.classList.add('is-open');
+        try {
+          const results = await fetchAddressSuggestions(query, input);
+          if (input.value.trim() !== query) return;
+          if (!Array.isArray(results) || !results.length) {
+            list.innerHTML = '<div class="autocomplete-status">Öneri bulunamadı. Adresi manuel yazabilirsiniz.</div>';
+            return;
+          }
+          list.innerHTML = results.map((result, index) => {
+            const title = formatAddressSuggestion(result);
+            return `<button class="autocomplete-option" type="button" data-address-option="${index}"><span>${escapeAddressText(title)}</span><small>${escapeAddressText(result.display_name)}</small></button>`;
+          }).join('');
+          list.querySelectorAll('[data-address-option]').forEach((button) => {
+            button.addEventListener('click', () => selectAddressSuggestion(input, results[Number(button.dataset.addressOption)]));
+          });
+        } catch (error) {
+          if (error.name === 'AbortError') return;
+          list.innerHTML = '<div class="autocomplete-status">Adres önerileri alınamadı. Adresi manuel yazabilirsiniz.</div>';
+          console.warn('[panel-address-autocomplete]', error);
+        }
+      };
+
+      const scheduleAddressSuggestions = (input) => {
+        const previousTimer = autocompleteTimers.get(input);
+        if (previousTimer) window.clearTimeout(previousTimer);
+        autocompleteTimers.set(input, window.setTimeout(() => renderAddressSuggestions(input), 280));
       };
 
       const geocodePanelAddress = async (query) => {
@@ -763,6 +895,19 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
       distanceInput?.addEventListener('change', () => updateSuggestedPrice(false));
       editForm?.querySelectorAll('[data-priced-field]').forEach((field) => {
         field.addEventListener('change', () => updateSuggestedPrice(false));
+      });
+      panelAddressInputs.forEach((input) => {
+        input.addEventListener('input', () => {
+          clearAddressRouteState(input.dataset.addressPrefix);
+          scheduleAddressSuggestions(input);
+        });
+        input.addEventListener('focus', () => {
+          closeAllAddressSuggestions(input);
+          scheduleAddressSuggestions(input);
+        });
+      });
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.panel-address-autocomplete')) closeAllAddressSuggestions();
       });
       distanceButton?.addEventListener('click', calculatePanelDistance);
       document.querySelector('[data-delete-open]')?.addEventListener('click', () => {
