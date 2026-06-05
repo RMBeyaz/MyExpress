@@ -288,7 +288,6 @@ if (mx_table_exists('courier_delivery_proofs')) {
     $proofStmt->execute([':id' => $id]);
     $courierProofs = $proofStmt->fetchAll();
 }
-[$statusLogs, $statusLogsPagination] = mx_paginate_array($statusLogs, 'status_logs', 10);
 [$auditLogs, $auditLogsPagination] = mx_paginate_array($auditLogs, 'audit_logs', 10);
 
 $statuses = mx_statuses();
@@ -323,7 +322,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260605-courier-dispatch-detail">
+    <link rel="stylesheet" href="../styles.css?v=20260605-status-log-scroll">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -398,12 +397,11 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
 
         <article class="panel-card">
           <h2>Durum Geçmişi</h2>
-          <div class="panel-log">
+          <div class="panel-log status-log-scroll">
             <?php foreach ($statusLogs as $log): ?>
               <p><strong><?= mx_h($statuses[$log['status']] ?? $log['status']) ?></strong><br><?= mx_h($log['created_at']) ?><br><span><?= mx_h($log['note']) ?></span></p>
             <?php endforeach; ?>
           </div>
-          <?= mx_render_pagination($statusLogsPagination, 'status_logs', 'Durum geçmişi') ?>
         </article>
       </section>
 

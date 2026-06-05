@@ -2213,6 +2213,12 @@ h3 {
   gap: 12px;
 }
 
+.panel-log.status-log-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .panel-log p {
   margin: 0;
   padding-bottom: 12px;
