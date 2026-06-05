@@ -278,8 +278,11 @@ if (mx_table_exists('request_audit_logs')) {
 }
 $courierProofs = [];
 if (mx_table_exists('courier_delivery_proofs')) {
+    $proofLocationSelect = mx_column_exists('courier_delivery_proofs', 'location_lat')
+        ? ', cdp.location_lat, cdp.location_lng, cdp.location_accuracy_m, cdp.location_captured_at, cdp.location_status'
+        : ', NULL AS location_lat, NULL AS location_lng, NULL AS location_accuracy_m, NULL AS location_captured_at, NULL AS location_status';
     $proofStmt = $pdo->prepare(
-        'SELECT cdp.id, cdp.proof_type, cdp.delivered_to, cdp.note, cdp.created_at, c.full_name AS courier_name
+        'SELECT cdp.id, cdp.proof_type, cdp.delivered_to, cdp.note, cdp.created_at, c.full_name AS courier_name' . $proofLocationSelect . '
          FROM courier_delivery_proofs cdp
          LEFT JOIN couriers c ON c.id = cdp.courier_id
          WHERE cdp.request_id = :id
@@ -524,6 +527,12 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
                   <span><?= mx_h($proof['courier_name'] ?: 'Kurye') ?> · <?= mx_h($proof['created_at']) ?></span>
                   <?php if (!empty($proof['delivered_to'])): ?><span>Teslim edilen kişi: <?= mx_h($proof['delivered_to']) ?></span><?php endif; ?>
                   <?php if (!empty($proof['note'])): ?><span><?= mx_h($proof['note']) ?></span><?php endif; ?>
+                  <?php if (!empty($proof['location_lat']) && !empty($proof['location_lng'])): ?>
+                    <span>Konum doğruluğu: <?= !empty($proof['location_accuracy_m']) ? mx_h(number_format((float) $proof['location_accuracy_m'], 0, ',', '.')) . ' m' : 'belirtilmedi' ?></span>
+                    <a class="panel-proof-location" href="https://www.google.com/maps?q=<?= rawurlencode((string) $proof['location_lat'] . ',' . (string) $proof['location_lng']) ?>" target="_blank" rel="noopener">Konumu Haritada Aç</a>
+                  <?php elseif (!empty($proof['location_status'])): ?>
+                    <span>Konum: <?= mx_h($proof['location_status'] === 'denied' ? 'izin verilmedi' : 'alınamadı') ?></span>
+                  <?php endif; ?>
                 </div>
               </article>
             <?php endforeach; ?>

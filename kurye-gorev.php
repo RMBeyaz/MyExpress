@@ -50,12 +50,9 @@ $saveProof = static function (array $file, string $proofType, array $request, st
     $fileName = (string) $savedProof['file_name'];
     $storedMime = (string) $savedProof['mime_type'];
 
-    mx_pdo()->prepare(
-        'INSERT INTO courier_delivery_proofs
-            (request_id, courier_id, proof_type, file_name, mime_type, delivered_to, note, ip_address, user_agent)
-         VALUES
-            (:request_id, :courier_id, :proof_type, :file_name, :mime_type, :delivered_to, :note, :ip_address, :user_agent)'
-    )->execute([
+    $columns = ['request_id', 'courier_id', 'proof_type', 'file_name', 'mime_type', 'delivered_to', 'note', 'ip_address', 'user_agent'];
+    $values = [':request_id', ':courier_id', ':proof_type', ':file_name', ':mime_type', ':delivered_to', ':note', ':ip_address', ':user_agent'];
+    $params = [
         ':request_id' => (int) $request['id'],
         ':courier_id' => (int) $request['assigned_courier_id'],
         ':proof_type' => $proofType,
@@ -65,7 +62,33 @@ $saveProof = static function (array $file, string $proofType, array $request, st
         ':note' => $note !== '' ? $note : null,
         ':ip_address' => mx_client_ip(),
         ':user_agent' => mx_clean_string($_SERVER['HTTP_USER_AGENT'] ?? '', 255),
-    ]);
+    ];
+
+    if (mx_column_exists('courier_delivery_proofs', 'location_lat')) {
+        $lat = filter_var($_POST['location_lat'] ?? null, FILTER_VALIDATE_FLOAT);
+        $lng = filter_var($_POST['location_lng'] ?? null, FILTER_VALIDATE_FLOAT);
+        $accuracy = filter_var($_POST['location_accuracy_m'] ?? null, FILTER_VALIDATE_FLOAT);
+        $locationStatus = mx_clean_string($_POST['location_status'] ?? '', 40);
+        $capturedAtRaw = mx_clean_string($_POST['location_captured_at'] ?? '', 40);
+        $capturedAt = null;
+        if ($capturedAtRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $capturedAtRaw)) {
+            $timestamp = strtotime($capturedAtRaw);
+            $capturedAt = $timestamp !== false ? date('Y-m-d H:i:s', $timestamp) : null;
+        }
+        $hasValidLocation = $lat !== false && $lng !== false && $lat >= -90 && $lat <= 90 && $lng >= -180 && $lng <= 180;
+
+        array_push($columns, 'location_lat', 'location_lng', 'location_accuracy_m', 'location_captured_at', 'location_status');
+        array_push($values, ':location_lat', ':location_lng', ':location_accuracy_m', ':location_captured_at', ':location_status');
+        $params[':location_lat'] = $hasValidLocation ? round((float) $lat, 7) : null;
+        $params[':location_lng'] = $hasValidLocation ? round((float) $lng, 7) : null;
+        $params[':location_accuracy_m'] = $hasValidLocation && $accuracy !== false ? round(max(0, (float) $accuracy), 2) : null;
+        $params[':location_captured_at'] = $hasValidLocation ? $capturedAt : null;
+        $params[':location_status'] = $hasValidLocation ? 'captured' : ($locationStatus !== '' ? $locationStatus : 'unavailable');
+    }
+
+    mx_pdo()->prepare(
+        'INSERT INTO courier_delivery_proofs (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')'
+    )->execute($params);
 
     return $fileName;
 };
@@ -163,8 +186,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $request = mx_courier_task_request($requestId, $token) ?: $request;
 $proofs = [];
 if (mx_table_exists('courier_delivery_proofs')) {
+    $locationSelect = mx_column_exists('courier_delivery_proofs', 'location_lat')
+        ? ', location_lat, location_lng, location_accuracy_m, location_captured_at, location_status'
+        : ', NULL AS location_lat, NULL AS location_lng, NULL AS location_accuracy_m, NULL AS location_captured_at, NULL AS location_status';
     $proofStmt = mx_pdo()->prepare(
-        'SELECT id, proof_type, delivered_to, note, created_at
+        'SELECT id, proof_type, delivered_to, note, created_at' . $locationSelect . '
          FROM courier_delivery_proofs
          WHERE request_id = :request_id AND courier_id = :courier_id
          ORDER BY created_at DESC'
@@ -189,7 +215,7 @@ $canDeliver = (string) $request['status'] === 'picked_up';
     <meta name="robots" content="noindex, nofollow">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Kurye Görevi</title>
     <link rel="icon" type="image/png" href="assets/Logo.png">
-    <link rel="stylesheet" href="styles.css?v=20260604-courier-task">
+    <link rel="stylesheet" href="styles.css?v=20260605-courier-location">
   </head>
   <body class="courier-task-body">
     <main class="courier-task-shell">
@@ -244,12 +270,17 @@ $canDeliver = (string) $request['status'] === 'picked_up';
       </section>
 
       <section class="courier-task-actions">
-        <form class="courier-task-card courier-task-form" method="post" enctype="multipart/form-data">
+        <form class="courier-task-card courier-task-form" method="post" enctype="multipart/form-data" data-location-form>
           <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
           <input type="hidden" name="token" value="<?= mx_h($token) ?>">
           <input type="hidden" name="action" value="pickup">
+          <input type="hidden" name="location_lat" data-location-lat>
+          <input type="hidden" name="location_lng" data-location-lng>
+          <input type="hidden" name="location_accuracy_m" data-location-accuracy>
+          <input type="hidden" name="location_captured_at" data-location-captured-at>
+          <input type="hidden" name="location_status" data-location-status>
           <h2>Gönderiyi Teslim Al</h2>
-          <p>Gönderiyi teslim aldığınız anda paketin net göründüğü bir fotoğraf yükleyin.</p>
+          <p>Gönderiyi teslim aldığınız anda paketin net göründüğü bir fotoğraf yükleyin. Konum izni verirseniz işlem noktası da kaydedilir.</p>
           <label>Fotoğraf
             <input type="file" name="proof_photo" accept="image/jpeg,image/png,image/webp" capture="environment" required <?= $canPickup ? '' : 'disabled' ?>>
           </label>
@@ -257,12 +288,17 @@ $canDeliver = (string) $request['status'] === 'picked_up';
           <button class="btn btn-primary" type="submit" <?= $canPickup ? '' : 'disabled' ?>>Teslim Aldım</button>
         </form>
 
-        <form class="courier-task-card courier-task-form" method="post" enctype="multipart/form-data">
+        <form class="courier-task-card courier-task-form" method="post" enctype="multipart/form-data" data-location-form>
           <input type="hidden" name="id" value="<?= (int) $request['id'] ?>">
           <input type="hidden" name="token" value="<?= mx_h($token) ?>">
           <input type="hidden" name="action" value="delivery">
+          <input type="hidden" name="location_lat" data-location-lat>
+          <input type="hidden" name="location_lng" data-location-lng>
+          <input type="hidden" name="location_accuracy_m" data-location-accuracy>
+          <input type="hidden" name="location_captured_at" data-location-captured-at>
+          <input type="hidden" name="location_status" data-location-status>
           <h2>Gönderiyi Teslim Et</h2>
-          <p>Teslim noktasında paketin ve teslim ortamının anlaşılır olduğu bir fotoğraf yükleyin.</p>
+          <p>Teslim noktasında paketin ve teslim ortamının anlaşılır olduğu bir fotoğraf yükleyin. Konum izni verirseniz teslim noktası da kaydedilir.</p>
           <label>Teslim edilen kişi
             <input type="text" name="delivered_to" maxlength="160" placeholder="Ad soyad veya teslim alan görevli" required <?= $canDeliver ? '' : 'disabled' ?>>
           </label>
@@ -287,11 +323,80 @@ $canDeliver = (string) $request['status'] === 'picked_up';
                 <span><?= mx_h($proof['created_at']) ?></span>
                 <?php if (!empty($proof['delivered_to'])): ?><span>Teslim edilen kişi: <?= mx_h($proof['delivered_to']) ?></span><?php endif; ?>
                 <?php if (!empty($proof['note'])): ?><span><?= mx_h($proof['note']) ?></span><?php endif; ?>
+                <?php if (!empty($proof['location_lat']) && !empty($proof['location_lng'])): ?>
+                  <a class="courier-task-map-link" href="https://www.google.com/maps?q=<?= rawurlencode((string) $proof['location_lat'] . ',' . (string) $proof['location_lng']) ?>" target="_blank" rel="noopener">İşlem konumunu aç</a>
+                <?php elseif (!empty($proof['location_status'])): ?>
+                  <span>Konum: <?= mx_h($proof['location_status'] === 'denied' ? 'izin verilmedi' : 'alınamadı') ?></span>
+                <?php endif; ?>
               </div>
             </article>
           <?php endforeach; ?>
         </section>
       <?php endif; ?>
     </main>
+    <script>
+      (() => {
+        const forms = document.querySelectorAll('[data-location-form]');
+        const setValue = (form, selector, value) => {
+          const input = form.querySelector(selector);
+          if (input) input.value = value || '';
+        };
+        const markLocation = (form, status, coords = null) => {
+          setValue(form, '[data-location-status]', status);
+          if (coords) {
+            setValue(form, '[data-location-lat]', String(coords.latitude));
+            setValue(form, '[data-location-lng]', String(coords.longitude));
+            setValue(form, '[data-location-accuracy]', String(coords.accuracy || ''));
+            setValue(form, '[data-location-captured-at]', new Date().toISOString());
+          }
+        };
+
+        forms.forEach((form) => {
+          form.addEventListener('submit', (event) => {
+            if (form.dataset.locationReady === '1') {
+              return;
+            }
+            event.preventDefault();
+            const submitButton = form.querySelector('button[type="submit"]');
+            const previousText = submitButton ? submitButton.textContent : '';
+            if (submitButton) {
+              submitButton.disabled = true;
+              submitButton.textContent = 'Konum alınıyor...';
+            }
+
+            const continueSubmit = () => {
+              form.dataset.locationReady = '1';
+              if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = previousText;
+              }
+              form.requestSubmit ? form.requestSubmit() : form.submit();
+            };
+
+            if (!navigator.geolocation) {
+              markLocation(form, 'unsupported');
+              continueSubmit();
+              return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                markLocation(form, 'captured', position.coords);
+                continueSubmit();
+              },
+              (error) => {
+                markLocation(form, error && error.code === 1 ? 'denied' : 'unavailable');
+                continueSubmit();
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 30000
+              }
+            );
+          });
+        });
+      })();
+    </script>
   </body>
 </html>

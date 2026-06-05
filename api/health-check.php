@@ -154,6 +154,9 @@ try {
     $checks['columns']['customer_invoices.request_id'] = mx_column_exists('customer_invoices', 'request_id');
     $checks['columns']['customer_invoices.payment_status'] = mx_column_exists('customer_invoices', 'payment_status');
     $checks['columns']['customer_invoices.original_file_name'] = mx_column_exists('customer_invoices', 'original_file_name');
+    foreach (['location_lat', 'location_lng', 'location_accuracy_m', 'location_captured_at', 'location_status'] as $column) {
+        $checks['columns']['courier_delivery_proofs.' . $column] = mx_column_exists('courier_delivery_proofs', $column);
+    }
     if ($checks['tables']['pricing_settings']) {
         $pricing = mx_pricing_settings();
         $checks['pricing']['settings_loaded'] = true;
