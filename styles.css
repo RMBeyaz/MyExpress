@@ -3823,6 +3823,25 @@ h3 {
   cursor: not-allowed;
 }
 
+.panel-body .panel-icon-btn.courier-detail-dispatch {
+  color: #178d4e;
+  background: #eaf8f0;
+  border-color: #ccebd8;
+  text-decoration: none;
+}
+
+.panel-body .panel-icon-btn.courier-detail-dispatch:hover {
+  color: #0f6f3c;
+  background: #ddf4e7;
+  border-color: #acdcbf;
+}
+
+.panel-body .panel-icon-btn.courier-detail-dispatch:disabled {
+  color: #8d99a4;
+  background: #edf1f4;
+  border-color: #dbe2e7;
+}
+
 .panel-body .courier-current,
 .panel-body .panel-help-text {
   margin: 8px 0 0;

@@ -384,9 +384,13 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
               </label>
               <button class="btn btn-primary" type="submit">Kuryeyi Ata</button>
               <?php if ($assignedCourier): ?>
-                <a class="btn btn-secondary courier-detail-dispatch" href="kuryeye-ilet.php?id=<?= (int) $request['id'] ?>" target="_blank" rel="noopener">WhatsApp'a Gönder</a>
+                <a class="panel-icon-btn courier-detail-dispatch" href="kuryeye-ilet.php?id=<?= (int) $request['id'] ?>" target="_blank" rel="noopener" aria-label="Kuryeye WhatsApp mesajı gönder" title="Kuryeye WhatsApp mesajı gönder">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12.04 3.5a8.35 8.35 0 0 0-7.1 12.75L3.9 20.1l3.95-1.03a8.35 8.35 0 1 0 4.19-15.57Zm0 1.65a6.7 6.7 0 0 1 5.66 10.28 6.67 6.67 0 0 1-8.37 2.47l-.28-.14-2.35.62.63-2.28-.16-.3a6.69 6.69 0 0 1 4.87-10.65Zm-2.34 3.4c-.16 0-.42.06-.64.3-.22.23-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.67 2.66 4.13 3.62 2.05.81 2.47.65 2.92.61.45-.04 1.45-.59 1.65-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.47-.28-.25-.12-1.45-.72-1.68-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.78.96-.14.16-.29.18-.54.06-.25-.12-1.04-.38-1.98-1.21-.73-.65-1.23-1.45-1.37-1.7-.14-.25-.02-.38.1-.5.11-.1.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.55-1.33-.76-1.82-.2-.47-.4-.41-.55-.42h-.47Z"/></svg>
+                </a>
               <?php else: ?>
-                <button class="btn btn-secondary courier-detail-dispatch" type="button" disabled title="Önce kuryeyi atayın">WhatsApp'a Gönder</button>
+                <button class="panel-icon-btn courier-detail-dispatch" type="button" disabled aria-label="Önce kuryeyi atayın" title="Önce kuryeyi atayın">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12.04 3.5a8.35 8.35 0 0 0-7.1 12.75L3.9 20.1l3.95-1.03a8.35 8.35 0 1 0 4.19-15.57Zm0 1.65a6.7 6.7 0 0 1 5.66 10.28 6.67 6.67 0 0 1-8.37 2.47l-.28-.14-2.35.62.63-2.28-.16-.3a6.69 6.69 0 0 1 4.87-10.65Zm-2.34 3.4c-.16 0-.42.06-.64.3-.22.23-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.67 2.66 4.13 3.62 2.05.81 2.47.65 2.92.61.45-.04 1.45-.59 1.65-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.47-.28-.25-.12-1.45-.72-1.68-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.78.96-.14.16-.29.18-.54.06-.25-.12-1.04-.38-1.98-1.21-.73-.65-1.23-1.45-1.37-1.7-.14-.25-.02-.38.1-.5.11-.1.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.55-1.33-.76-1.82-.2-.47-.4-.41-.55-.42h-.47Z"/></svg>
+                </button>
               <?php endif; ?>
             </div>
             <?php if ($assignedCourier): ?>
