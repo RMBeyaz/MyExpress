@@ -329,6 +329,10 @@ const updateDetailEstimate = () => {
   const pickupAddress = detailForm.elements.pickup?.value?.trim() || '';
   const dropoffAddress = detailForm.elements.dropoff?.value?.trim() || '';
   const target = detailPriceEstimate.querySelector('strong');
+  const pickupTarget = requestSummary?.querySelector('[data-summary-pickup]');
+  const dropoffTarget = requestSummary?.querySelector('[data-summary-dropoff]');
+  if (pickupTarget) pickupTarget.textContent = pickupAddress || 'Belirtilmedi';
+  if (dropoffTarget) dropoffTarget.textContent = dropoffAddress || 'Belirtilmedi';
 
   if (!pickupAddress || !dropoffAddress) {
     detailPriceEstimate.hidden = false;

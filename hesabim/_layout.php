@@ -75,7 +75,7 @@ function mx_account_footer(): void
       </div>
       <div class="footer-bottom">© 2026 MyExpress Kurye. Tüm hakları saklıdır.</div>
     </footer>
-    <script src="../script.js?v=20260604-password-reset"></script>
+    <script src="../script.js?v=20260605-live-check-summary"></script>
   </body>
 </html>
     <?php
