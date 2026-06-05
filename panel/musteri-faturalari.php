@@ -78,10 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $safeName = 'fatura-' . (int) $customer['id'] . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(6)) . '.pdf';
             $targetPath = $customerUploadDir . '/' . $safeName;
-            if (!move_uploaded_file((string) $file['tmp_name'], $targetPath)) {
-                throw new RuntimeException('PDF dosyası kaydedilemedi.');
-            }
-            @chmod($targetPath, 0600);
+            mx_save_uploaded_invoice_pdf((string) $file['tmp_name'], $targetPath);
             $filePath = 'uploads/faturalar/' . (int) $customer['id'] . '/' . $safeName;
             $title = $originalFileName !== '' ? $originalFileName : 'MyExpress fatura PDF';
 

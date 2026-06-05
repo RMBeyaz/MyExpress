@@ -957,6 +957,215 @@ function mx_courier_proof_directory(): string
     return dirname(__DIR__) . '/uploads/kurye-kanitlari';
 }
 
+function mx_config_int(string $key, int $default, int $min, int $max): int
+{
+    try {
+        $value = (int) (mx_config()[$key] ?? $default);
+    } catch (Throwable) {
+        $value = $default;
+    }
+
+    return max($min, min($max, $value));
+}
+
+function mx_image_from_upload(string $path, string $mime)
+{
+    if (!extension_loaded('gd')) {
+        return null;
+    }
+
+    return match ($mime) {
+        'image/jpeg' => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($path) : null,
+        'image/png' => function_exists('imagecreatefrompng') ? @imagecreatefrompng($path) : null,
+        'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : null,
+        default => null,
+    };
+}
+
+function mx_apply_jpeg_orientation($image, string $path)
+{
+    if (!function_exists('exif_read_data')) {
+        return $image;
+    }
+
+    $exif = @exif_read_data($path);
+    $orientation = (int) ($exif['Orientation'] ?? 1);
+    $angle = match ($orientation) {
+        3 => 180,
+        6 => 270,
+        8 => 90,
+        default => 0,
+    };
+
+    if ($angle === 0) {
+        return $image;
+    }
+
+    $rotated = imagerotate($image, $angle, 0);
+    if ($rotated) {
+        imagedestroy($image);
+        return $rotated;
+    }
+
+    return $image;
+}
+
+function mx_save_optimized_courier_proof(string $tmpName, string $mime, string $directory, string $baseName): array
+{
+    $originalSize = is_file($tmpName) ? (int) filesize($tmpName) : 0;
+    $maxDimension = mx_config_int('proof_image_max_dimension', 1600, 900, 2400);
+    $quality = mx_config_int('proof_image_jpeg_quality', 78, 55, 90);
+    $image = mx_image_from_upload($tmpName, $mime);
+
+    if (!$image) {
+        $extension = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? 'jpg';
+        $fileName = $baseName . '.' . $extension;
+        if (!move_uploaded_file($tmpName, $directory . DIRECTORY_SEPARATOR . $fileName)) {
+            throw new RuntimeException('Fotoğraf kaydedilemedi.');
+        }
+
+        return [
+            'file_name' => $fileName,
+            'mime_type' => $mime,
+            'optimized' => false,
+            'original_size' => $originalSize,
+            'stored_size' => (int) filesize($directory . DIRECTORY_SEPARATOR . $fileName),
+        ];
+    }
+
+    if ($mime === 'image/jpeg') {
+        $image = mx_apply_jpeg_orientation($image, $tmpName);
+    }
+
+    $width = imagesx($image);
+    $height = imagesy($image);
+    if ($width <= 0 || $height <= 0) {
+        imagedestroy($image);
+        throw new RuntimeException('Fotoğraf işlenemedi.');
+    }
+
+    $scale = min(1, $maxDimension / max($width, $height));
+    $targetWidth = max(1, (int) round($width * $scale));
+    $targetHeight = max(1, (int) round($height * $scale));
+    $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+    if (!$canvas) {
+        imagedestroy($image);
+        throw new RuntimeException('Fotoğraf işlenemedi.');
+    }
+
+    $white = imagecolorallocate($canvas, 255, 255, 255);
+    imagefilledrectangle($canvas, 0, 0, $targetWidth, $targetHeight, $white);
+    imagecopyresampled($canvas, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+    imagedestroy($image);
+
+    $fileName = $baseName . '.jpg';
+    $targetPath = $directory . DIRECTORY_SEPARATOR . $fileName;
+    if (!imagejpeg($canvas, $targetPath, $quality)) {
+        imagedestroy($canvas);
+        throw new RuntimeException('Fotoğraf kaydedilemedi.');
+    }
+    imagedestroy($canvas);
+    @chmod($targetPath, 0600);
+
+    return [
+        'file_name' => $fileName,
+        'mime_type' => 'image/jpeg',
+        'optimized' => true,
+        'original_size' => $originalSize,
+        'stored_size' => (int) filesize($targetPath),
+    ];
+}
+
+function mx_ghostscript_binary(): ?string
+{
+    foreach (['/usr/bin/gs', '/usr/local/bin/gs', '/bin/gs'] as $path) {
+        if (is_executable($path)) {
+            return $path;
+        }
+    }
+
+    return null;
+}
+
+function mx_try_compress_pdf(string $sourcePath, string $targetPath): bool
+{
+    $gs = mx_ghostscript_binary();
+    if ($gs === null || !function_exists('proc_open')) {
+        return false;
+    }
+
+    $tempTarget = $targetPath . '.tmp';
+    @unlink($tempTarget);
+    $command = [
+        $gs,
+        '-q',
+        '-dSAFER',
+        '-dBATCH',
+        '-dNOPAUSE',
+        '-sDEVICE=pdfwrite',
+        '-dCompatibilityLevel=1.4',
+        '-dPDFSETTINGS=/ebook',
+        '-dDetectDuplicateImages=true',
+        '-dCompressFonts=true',
+        '-r150',
+        '-sOutputFile=' . $tempTarget,
+        $sourcePath,
+    ];
+    $descriptors = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = @proc_open($command, $descriptors, $pipes);
+    if (!is_resource($process)) {
+        return false;
+    }
+
+    foreach ($pipes as $pipe) {
+        fclose($pipe);
+    }
+    $exitCode = proc_close($process);
+    if ($exitCode !== 0 || !is_file($tempTarget) || (int) filesize($tempTarget) <= 0) {
+        @unlink($tempTarget);
+        return false;
+    }
+
+    $sourceSize = (int) filesize($sourcePath);
+    $compressedSize = (int) filesize($tempTarget);
+    if ($sourceSize > 0 && $compressedSize < $sourceSize) {
+        rename($tempTarget, $targetPath);
+        @chmod($targetPath, 0600);
+        return true;
+    }
+
+    @unlink($tempTarget);
+    return false;
+}
+
+function mx_save_uploaded_invoice_pdf(string $tmpName, string $targetPath): array
+{
+    $originalSize = is_file($tmpName) ? (int) filesize($tmpName) : 0;
+    $compressed = false;
+    try {
+        $compressed = mx_try_compress_pdf($tmpName, $targetPath);
+    } catch (Throwable $error) {
+        mx_log_error('invoice pdf compression failed', $error);
+        $compressed = false;
+    }
+
+    if (!$compressed && !move_uploaded_file($tmpName, $targetPath)) {
+        throw new RuntimeException('PDF dosyası kaydedilemedi.');
+    }
+    @chmod($targetPath, 0600);
+
+    return [
+        'compressed' => $compressed,
+        'original_size' => $originalSize,
+        'stored_size' => (int) filesize($targetPath),
+    ];
+}
+
 function mx_courier_proof_absolute_path(string $fileName): ?string
 {
     $fileName = trim($fileName);

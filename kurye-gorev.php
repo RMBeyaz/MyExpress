@@ -31,12 +31,7 @@ $saveProof = static function (array $file, string $proofType, array $request, st
     $tmpName = (string) ($file['tmp_name'] ?? '');
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = (string) $finfo->file($tmpName);
-    $extensions = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/webp' => 'webp',
-    ];
-    if (!isset($extensions[$mime]) || @getimagesize($tmpName) === false) {
+    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) || @getimagesize($tmpName) === false) {
         throw new RuntimeException('Yalnızca JPG, PNG veya WebP fotoğraf yüklenebilir.');
     }
 
@@ -45,16 +40,15 @@ $saveProof = static function (array $file, string $proofType, array $request, st
         throw new RuntimeException('Fotoğraf klasörü hazırlanamadı.');
     }
 
-    $fileName = sprintf(
-        '%s-%s-%s.%s',
+    $baseName = sprintf(
+        '%s-%s-%s',
         (int) $request['id'],
         $proofType,
-        bin2hex(random_bytes(12)),
-        $extensions[$mime]
+        bin2hex(random_bytes(12))
     );
-    if (!move_uploaded_file($tmpName, $directory . DIRECTORY_SEPARATOR . $fileName)) {
-        throw new RuntimeException('Fotoğraf kaydedilemedi.');
-    }
+    $savedProof = mx_save_optimized_courier_proof($tmpName, $mime, $directory, $baseName);
+    $fileName = (string) $savedProof['file_name'];
+    $storedMime = (string) $savedProof['mime_type'];
 
     mx_pdo()->prepare(
         'INSERT INTO courier_delivery_proofs
@@ -66,7 +60,7 @@ $saveProof = static function (array $file, string $proofType, array $request, st
         ':courier_id' => (int) $request['assigned_courier_id'],
         ':proof_type' => $proofType,
         ':file_name' => $fileName,
-        ':mime_type' => $mime,
+        ':mime_type' => $storedMime,
         ':delivered_to' => $deliveredTo !== '' ? $deliveredTo : null,
         ':note' => $note !== '' ? $note : null,
         ':ip_address' => mx_client_ip(),
