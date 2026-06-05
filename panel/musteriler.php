@@ -155,7 +155,7 @@ if (mx_table_exists('customers')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Müşteriler | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260521-panel-invoices">
+    <link rel="stylesheet" href="../styles.css?v=20260605-customer-row-compact">
   </head>
   <body class="panel-body">
     <main class="panel-shell">
@@ -208,8 +208,10 @@ if (mx_table_exists('customers')) {
                 <tr>
                   <td><input form="customer-update-<?= (int) $customer['id'] ?>" name="full_name" value="<?= mx_h($customer['full_name']) ?>" required aria-label="Müşteri adı"></td>
                   <td>
-                    <input form="customer-update-<?= (int) $customer['id'] ?>" type="email" name="email" value="<?= mx_h($customer['email']) ?>" required aria-label="E-posta">
-                    <input form="customer-update-<?= (int) $customer['id'] ?>" name="phone" value="<?= mx_h($customer['phone']) ?>" aria-label="Telefon">
+                    <div class="customer-contact-inline">
+                      <input form="customer-update-<?= (int) $customer['id'] ?>" type="email" name="email" value="<?= mx_h($customer['email']) ?>" required aria-label="E-posta">
+                      <input form="customer-update-<?= (int) $customer['id'] ?>" name="phone" value="<?= mx_h($customer['phone']) ?>" aria-label="Telefon">
+                    </div>
                   </td>
                   <td><input form="customer-update-<?= (int) $customer['id'] ?>" name="tckn" value="<?= mx_h($customer['tckn']) ?>" maxlength="11" inputmode="numeric" aria-label="TCKN"></td>
                   <td>

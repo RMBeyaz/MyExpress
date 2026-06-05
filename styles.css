@@ -4268,37 +4268,44 @@ h3 {
 }
 
 .panel-body .customer-table {
-  min-width: 1180px;
+  min-width: 1320px;
 }
 
 .panel-body .customer-table th:nth-child(1),
 .panel-body .customer-table td:nth-child(1) {
-  width: 220px;
+  width: 210px;
 }
 
 .panel-body .customer-table th:nth-child(2),
 .panel-body .customer-table td:nth-child(2) {
-  width: 260px;
+  width: 410px;
 }
 
 .panel-body .customer-table th:nth-child(3),
 .panel-body .customer-table td:nth-child(3),
 .panel-body .customer-table th:nth-child(4),
 .panel-body .customer-table td:nth-child(4) {
-  width: 120px;
+  width: 118px;
 }
 
 .panel-body .customer-table th:nth-child(5),
 .panel-body .customer-table td:nth-child(5),
 .panel-body .customer-table th:nth-child(6),
 .panel-body .customer-table td:nth-child(6) {
-  width: 140px;
+  width: 132px;
 }
 
 .panel-body .customer-table th:nth-child(7),
 .panel-body .customer-table td:nth-child(7) {
-  width: 186px;
+  width: 170px;
   text-align: right;
+}
+
+.panel-body .customer-contact-inline {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.3fr) minmax(130px, 0.7fr);
+  gap: 8px;
+  align-items: center;
 }
 
 .panel-body .customer-table .user-actions {
@@ -4311,7 +4318,7 @@ h3 {
 }
 
 .panel-body .customer-table td:nth-child(2) input + input {
-  margin-top: 7px;
+  margin-top: 0;
 }
 
 .panel-body .customer-history-table {
