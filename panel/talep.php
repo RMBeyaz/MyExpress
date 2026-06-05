@@ -323,7 +323,7 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= mx_h($request['tracking_code']) ?> | MyExpress Panel</title>
-    <link rel="stylesheet" href="../styles.css?v=20260604-panel-address-autocomplete">
+    <link rel="stylesheet" href="../styles.css?v=20260605-courier-dispatch-detail">
   </head>
   <body class="panel-body request-detail-page request-detail-flow">
     <main class="panel-shell">
@@ -381,6 +381,11 @@ if ($request['delivery_time'] !== '' && !in_array($request['delivery_time'], $de
                 </select>
               </label>
               <button class="btn btn-primary" type="submit">Kuryeyi Ata</button>
+              <?php if ($assignedCourier): ?>
+                <a class="btn btn-secondary courier-detail-dispatch" href="kuryeye-ilet.php?id=<?= (int) $request['id'] ?>" target="_blank" rel="noopener">WhatsApp'a Gönder</a>
+              <?php else: ?>
+                <button class="btn btn-secondary courier-detail-dispatch" type="button" disabled title="Önce kuryeyi atayın">WhatsApp'a Gönder</button>
+              <?php endif; ?>
             </div>
             <?php if ($assignedCourier): ?>
               <p class="courier-current"><strong>Atanan kurye:</strong> <?= mx_h($assignedCourier['full_name']) ?> · <a href="tel:<?= mx_h($assignedCourier['phone']) ?>"><?= mx_h($assignedCourier['phone']) ?></a></p>
